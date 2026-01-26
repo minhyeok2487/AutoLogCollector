@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "cisco-tool",
+  "outputfilename": "cisco-tool-gui",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "author": {
+    "name": "Cisco Automation Tool",
+    "email": ""
+  },
+  "info": {
+    "companyName": "Cisco Automation",
+    "productName": "Cisco Tool GUI",
+    "productVersion": "1.0.0",
+    "copyright": "2024",
+    "comments": "Cisco Device Automation Tool with GUI"
+  }
+}

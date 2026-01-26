@@ -3,3 +3,6 @@ credentials.json
 logs/
 *.exe
 .claude/
+
+# Wails build artifacts
+build/bin/
