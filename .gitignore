@@ -1,6 +1,5 @@
-credentials.cmd
-credentials.ps1
 credentials.json
 *.log
 logs/
 *.exe
+.claude/
