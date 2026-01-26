@@ -10,3 +10,5 @@ show memory statistics
 show version | include uptime
 
 exit
+exit
+exit
