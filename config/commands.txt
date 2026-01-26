@@ -1,0 +1,6 @@
+terminal length 0
+show processes cpu | include CPU
+show memory statistics
+show version | include uptime
+terminal length 24
+exit
