@@ -2,5 +2,6 @@ terminal length 0
 show processes cpu | include CPU
 show memory statistics
 show version | include uptime
+sh run
 terminal length 24
 exit
