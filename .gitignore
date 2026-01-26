@@ -1,2 +1,3 @@
 credentials.cmd
 *.log
+logs/
