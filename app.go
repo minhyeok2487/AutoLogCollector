@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"cisco-plink/internal/cisco"
@@ -137,12 +139,14 @@ func (a *App) StartExecution(username, password string) bool {
 
 	// Set result callback
 	a.runner.OnResult = func(result cisco.ExecutionResult) {
+		// Convert backslashes to forward slashes for JavaScript compatibility
+		logPath := strings.ReplaceAll(result.LogPath, "\\", "/")
 		runtime.EventsEmit(a.ctx, "result", map[string]interface{}{
 			"hostname": result.Server.Hostname,
 			"ip":       result.Server.IP,
 			"success":  result.Success,
 			"error":    result.Error,
-			"logPath":  result.LogPath,
+			"logPath":  logPath,
 			"duration": result.Duration,
 		})
 
@@ -203,7 +207,8 @@ func (a *App) OpenLogsFolder() {
 		absPath = logsDir
 	}
 
-	runtime.BrowserOpenURL(a.ctx, "file:///"+filepath.ToSlash(absPath))
+	// Open folder using explorer.exe on Windows
+	exec.Command("explorer.exe", absPath).Start()
 }
 
 // GetLogFiles returns list of log files in the logs directory
@@ -217,9 +222,11 @@ func (a *App) GetLogFiles() []map[string]string {
 			return nil
 		}
 		if !info.IsDir() && filepath.Ext(path) == ".log" {
+			// Convert backslashes to forward slashes for JavaScript compatibility
+			normalizedPath := strings.ReplaceAll(path, "\\", "/")
 			files = append(files, map[string]string{
 				"name":    info.Name(),
-				"path":    path,
+				"path":    normalizedPath,
 				"date":    filepath.Base(filepath.Dir(path)),
 				"modTime": info.ModTime().Format("2006-01-02 15:04:05"),
 			})
