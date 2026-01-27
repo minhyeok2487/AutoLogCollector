@@ -12,8 +12,6 @@ const elements = {
     stopBtn: document.getElementById('stopBtn'),
     serverCount: document.getElementById('serverCount'),
     commandCount: document.getElementById('commandCount'),
-    serversPreview: document.getElementById('serversPreview'),
-    commandsPreview: document.getElementById('commandsPreview'),
     progressSection: document.getElementById('progressSection'),
     progressFill: document.getElementById('progressFill'),
     progressText: document.getElementById('progressText'),
@@ -63,42 +61,48 @@ function setupEventListeners() {
 async function loadVersion() {
     try {
         const version = await runtime.GetCurrentVersion();
-        document.getElementById('versionText').textContent = `v${version}`;
+        document.getElementById('versionInfo').textContent = `v${version}`;
     } catch (err) {
         console.error('Failed to load version:', err);
     }
 }
 
+// Settings menu toggle
+function toggleSettingsMenu() {
+    const menu = document.getElementById('settingsMenu');
+    menu.classList.toggle('show');
+}
+
+function closeSettingsMenu() {
+    const menu = document.getElementById('settingsMenu');
+    menu.classList.remove('show');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.icon-dropdown')) {
+        closeSettingsMenu();
+    }
+});
+
 // Check for updates
 async function checkForUpdates() {
-    const updateBtn = document.getElementById('updateBtn');
-    updateBtn.textContent = 'Checking...';
-    updateBtn.disabled = true;
-
     try {
         const info = await runtime.CheckForUpdates();
 
         if (!info) {
-            updateBtn.textContent = 'Check Updates';
-            updateBtn.disabled = false;
             return;
         }
 
         if (info.available) {
             latestUpdateInfo = info;
-            updateBtn.textContent = 'Update Available!';
-            updateBtn.classList.add('has-update');
             showUpdateModal(info);
         } else {
             alert('You are using the latest version.');
-            updateBtn.textContent = 'Check Updates';
         }
     } catch (err) {
         showError('Failed to check for updates: ' + err);
-        updateBtn.textContent = 'Check Updates';
     }
-
-    updateBtn.disabled = false;
 }
 
 // Show update modal
@@ -348,13 +352,9 @@ async function previewServers() {
     try {
         const servers = await runtime.PreviewServers();
         if (servers && servers.length > 0) {
-            elements.serverCount.textContent = servers.length;
-            elements.serversPreview.innerHTML = '<ul>' +
-                servers.map(s => `<li><strong>${s.hostname}</strong> (${s.ip})</li>`).join('') +
-                '</ul>';
+            elements.serverCount.textContent = `(${servers.length})`;
         } else {
-            elements.serverCount.textContent = '0';
-            elements.serversPreview.innerHTML = '<p class="placeholder">No servers loaded</p>';
+            elements.serverCount.textContent = '';
         }
     } catch (err) {
         showError('Failed to preview servers: ' + err);
@@ -365,13 +365,9 @@ async function previewCommands() {
     try {
         const commands = await runtime.PreviewCommands();
         if (commands && commands.length > 0) {
-            elements.commandCount.textContent = commands.length;
-            elements.commandsPreview.innerHTML = '<ul>' +
-                commands.map(c => `<li><code>${escapeHtml(c)}</code></li>`).join('') +
-                '</ul>';
+            elements.commandCount.textContent = `(${commands.length})`;
         } else {
-            elements.commandCount.textContent = '0';
-            elements.commandsPreview.innerHTML = '<p class="placeholder">No commands loaded</p>';
+            elements.commandCount.textContent = '';
         }
     } catch (err) {
         showError('Failed to preview commands: ' + err);
@@ -558,3 +554,5 @@ window.checkForUpdates = checkForUpdates;
 window.closeUpdateModal = closeUpdateModal;
 window.downloadUpdate = downloadUpdate;
 window.restartApp = restartApp;
+window.toggleSettingsMenu = toggleSettingsMenu;
+window.closeSettingsMenu = closeSettingsMenu;
