@@ -335,3 +335,30 @@ func (a *App) RestartApp() {
 	cmd.Start()
 	os.Exit(0)
 }
+
+// ExportResults exports execution results to Excel file
+func (a *App) ExportResults() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.runner == nil {
+		return ""
+	}
+
+	results := a.runner.GetResults()
+	if len(results) == 0 {
+		return ""
+	}
+
+	// Create output path
+	outputPath := filepath.Join(a.runner.LogDir, "results.xlsx")
+
+	// Export to Excel
+	err := cisco.ExportToExcel(results, a.commands, outputPath)
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to export Excel: "+err.Error())
+		return ""
+	}
+
+	return outputPath
+}

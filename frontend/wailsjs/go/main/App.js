@@ -10,6 +10,10 @@ export function DownloadAndInstallUpdate(arg1) {
   return window['go']['main']['App']['DownloadAndInstallUpdate'](arg1);
 }
 
+export function ExportResults() {
+  return window['go']['main']['App']['ExportResults']();
+}
+
 export function GetCurrentLogDir() {
   return window['go']['main']['App']['GetCurrentLogDir']();
 }

@@ -7,6 +7,8 @@ export function CheckForUpdates():Promise<updater.UpdateInfo>;
 
 export function DownloadAndInstallUpdate(arg1:string):Promise<boolean>;
 
+export function ExportResults():Promise<string>;
+
 export function GetCurrentLogDir():Promise<string>;
 
 export function GetCurrentVersion():Promise<string>;

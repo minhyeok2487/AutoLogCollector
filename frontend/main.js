@@ -515,6 +515,20 @@ async function openLogsFolder() {
     }
 }
 
+// Export results to Excel
+async function exportResults() {
+    try {
+        const path = await runtime.ExportResults();
+        if (path) {
+            alert('Excel exported to:\n' + path);
+        } else {
+            showError('No results to export');
+        }
+    } catch (err) {
+        showError('Failed to export Excel: ' + err);
+    }
+}
+
 // UI helpers
 function setRunningState(running) {
     elements.runBtn.disabled = running;
@@ -556,3 +570,4 @@ window.downloadUpdate = downloadUpdate;
 window.restartApp = restartApp;
 window.toggleSettingsMenu = toggleSettingsMenu;
 window.closeSettingsMenu = closeSettingsMenu;
+window.exportResults = exportResults;
