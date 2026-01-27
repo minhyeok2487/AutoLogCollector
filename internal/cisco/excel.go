@@ -8,6 +8,7 @@ import (
 )
 
 // ExportToExcel exports execution results to an Excel file
+// Format: Columns = Hostnames, Rows = Output lines
 func ExportToExcel(results []ExecutionResult, commands []string, outputPath string) error {
 	f := excelize.NewFile()
 	defer f.Close()
@@ -17,8 +18,8 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 
 	// Set header style
 	headerStyle, _ := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true, Color: "FFFFFF"},
-		Fill: excelize.Fill{Type: "pattern", Color: []string{"1a73e8"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true, Color: "FFFFFF"},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"1a73e8"}, Pattern: 1},
 		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
 		Border: []excelize.Border{
 			{Type: "left", Color: "000000", Style: 1},
@@ -30,7 +31,7 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 
 	// Set cell style
 	cellStyle, _ := f.NewStyle(&excelize.Style{
-		Alignment: &excelize.Alignment{Vertical: "top", WrapText: true},
+		Alignment: &excelize.Alignment{Vertical: "center"},
 		Border: []excelize.Border{
 			{Type: "left", Color: "000000", Style: 1},
 			{Type: "top", Color: "000000", Style: 1},
@@ -39,45 +40,74 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Write header row
-	f.SetCellValue(sheetName, "A1", "Hostname")
+	// Set line number style
+	lineNumStyle, _ := f.NewStyle(&excelize.Style{
+		Font:      &excelize.Font{Color: "888888"},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"f5f5f5"}, Pattern: 1},
+		Border: []excelize.Border{
+			{Type: "left", Color: "000000", Style: 1},
+			{Type: "top", Color: "000000", Style: 1},
+			{Type: "bottom", Color: "000000", Style: 1},
+			{Type: "right", Color: "000000", Style: 1},
+		},
+	})
+
+	// Write header row: empty + hostnames
+	f.SetCellValue(sheetName, "A1", "Line")
 	f.SetCellStyle(sheetName, "A1", "A1", headerStyle)
 
-	for i, cmd := range commands {
+	for i, result := range results {
 		col := getColumnName(i + 2) // B, C, D, ...
-		f.SetCellValue(sheetName, col+"1", cmd)
+		f.SetCellValue(sheetName, col+"1", result.Server.Hostname)
 		f.SetCellStyle(sheetName, col+"1", col+"1", headerStyle)
 	}
 
+	// Parse outputs into lines
+	allOutputLines := make([][]string, len(results))
+	maxLines := 0
+
+	for i, result := range results {
+		lines := strings.Split(result.Output, "\n")
+		// Clean up lines (remove \r)
+		cleanLines := make([]string, 0, len(lines))
+		for _, line := range lines {
+			cleanLine := strings.TrimRight(line, "\r")
+			cleanLines = append(cleanLines, cleanLine)
+		}
+		allOutputLines[i] = cleanLines
+		if len(cleanLines) > maxLines {
+			maxLines = len(cleanLines)
+		}
+	}
+
 	// Write data rows
-	for rowIdx, result := range results {
-		row := rowIdx + 2 // Start from row 2
+	for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
+		row := lineIdx + 2 // Start from row 2
 
-		// Hostname
-		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), result.Server.Hostname)
-		f.SetCellStyle(sheetName, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), cellStyle)
+		// Line number
+		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), lineIdx+1)
+		f.SetCellStyle(sheetName, fmt.Sprintf("A%d", row), fmt.Sprintf("A%d", row), lineNumStyle)
 
-		// Parse output by commands
-		cmdOutputs := parseCommandOutputs(result.Output, commands)
-
-		for i, output := range cmdOutputs {
-			col := getColumnName(i + 2)
+		// Each server's line
+		for serverIdx := range results {
+			col := getColumnName(serverIdx + 2)
 			cell := fmt.Sprintf("%s%d", col, row)
-			f.SetCellValue(sheetName, cell, output)
+
+			if lineIdx < len(allOutputLines[serverIdx]) {
+				f.SetCellValue(sheetName, cell, allOutputLines[serverIdx][lineIdx])
+			} else {
+				f.SetCellValue(sheetName, cell, "")
+			}
 			f.SetCellStyle(sheetName, cell, cell, cellStyle)
 		}
 	}
 
 	// Set column widths
-	f.SetColWidth(sheetName, "A", "A", 20)
-	for i := range commands {
+	f.SetColWidth(sheetName, "A", "A", 8)
+	for i := range results {
 		col := getColumnName(i + 2)
-		f.SetColWidth(sheetName, col, col, 50)
-	}
-
-	// Set row heights for better readability
-	for i := 2; i <= len(results)+1; i++ {
-		f.SetRowHeight(sheetName, i, 100)
+		f.SetColWidth(sheetName, col, col, 60)
 	}
 
 	return f.SaveAs(outputPath)
@@ -92,57 +122,4 @@ func getColumnName(n int) string {
 		n /= 26
 	}
 	return result
-}
-
-// parseCommandOutputs extracts output for each command from the full output
-func parseCommandOutputs(fullOutput string, commands []string) []string {
-	outputs := make([]string, len(commands))
-
-	if fullOutput == "" {
-		return outputs
-	}
-
-	lines := strings.Split(fullOutput, "\n")
-
-	// Find command positions
-	cmdPositions := make([]int, len(commands))
-	for i := range cmdPositions {
-		cmdPositions[i] = -1
-	}
-
-	for lineIdx, line := range lines {
-		for cmdIdx, cmd := range commands {
-			// Look for command in line (command might appear after prompt like "Router#show version")
-			if strings.Contains(line, cmd) {
-				if cmdPositions[cmdIdx] == -1 {
-					cmdPositions[cmdIdx] = lineIdx
-				}
-			}
-		}
-	}
-
-	// Extract output between commands
-	for i := 0; i < len(commands); i++ {
-		startLine := cmdPositions[i]
-		if startLine == -1 {
-			continue
-		}
-
-		// Find end line (next command position or end of output)
-		endLine := len(lines)
-		for j := i + 1; j < len(commands); j++ {
-			if cmdPositions[j] != -1 {
-				endLine = cmdPositions[j]
-				break
-			}
-		}
-
-		// Extract lines between start and end
-		if startLine+1 < endLine {
-			outputLines := lines[startLine+1 : endLine]
-			outputs[i] = strings.TrimSpace(strings.Join(outputLines, "\n"))
-		}
-	}
-
-	return outputs
 }
