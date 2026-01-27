@@ -487,27 +487,36 @@ footer button:hover {
     font-size: 13px;
 }
 
-.logs-view-toggle {
+/* Server Tabs */
+.server-tabs {
     display: flex;
     gap: 5px;
     margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
-.logs-view-toggle button {
-    padding: 6px 16px;
-    font-size: 12px;
+.server-tab {
+    padding: 8px 16px;
+    font-size: 13px;
     background: #f1f3f4;
     border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.logs-view-toggle button.active {
+.server-tab:hover {
+    background: #e8eaed;
+}
+
+.server-tab.active {
     background: #1a73e8;
     color: white;
     border-color: #1a73e8;
 }
 
-/* Combined View */
-.logs-combined-view {
+/* Log Tab View */
+.logs-tab-view {
     background: #1e1e1e;
     border-radius: 6px;
     height: 500px;
@@ -543,77 +552,21 @@ footer button:hover {
     color: #dcdcaa;
 }
 
-/* Split View */
-.logs-split-view {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 15px;
-    max-height: 600px;
-    overflow-y: auto;
-}
-
-.server-log-panel {
-    background: #1e1e1e;
-    border-radius: 6px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    max-height: 300px;
-}
-
-.server-log-panel .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: #252526;
-    color: #cccccc;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.server-log-panel .panel-header button {
-    padding: 2px 8px;
-    font-size: 10px;
-    background: transparent;
-    border: none;
-    color: #808080;
-    cursor: pointer;
-}
-
-.server-log-panel .panel-header button:hover {
-    color: #ff5555;
-}
-
-.server-log-panel .panel-content {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-    font-family: 'Consolas', monospace;
-    font-size: 11px;
-    color: #d4d4d4;
-    margin: 0;
-}
-
 /* Dark scrollbar for log panels */
-.live-log-content::-webkit-scrollbar,
-.server-log-panel .panel-content::-webkit-scrollbar {
+.live-log-content::-webkit-scrollbar {
     width: 8px;
 }
 
-.live-log-content::-webkit-scrollbar-track,
-.server-log-panel .panel-content::-webkit-scrollbar-track {
+.live-log-content::-webkit-scrollbar-track {
     background: #2d2d2d;
 }
 
-.live-log-content::-webkit-scrollbar-thumb,
-.server-log-panel .panel-content::-webkit-scrollbar-thumb {
+.live-log-content::-webkit-scrollbar-thumb {
     background: #555;
     border-radius: 4px;
 }
 
-.live-log-content::-webkit-scrollbar-thumb:hover,
-.server-log-panel .panel-content::-webkit-scrollbar-thumb:hover {
+.live-log-content::-webkit-scrollbar-thumb:hover {
     background: #777;
 }
 

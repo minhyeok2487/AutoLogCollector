@@ -27,18 +27,15 @@ const elements = {
     statusText: document.getElementById('statusText'),
     // Live Logs elements
     autoScroll: document.getElementById('autoScroll'),
-    serverFilter: document.getElementById('serverFilter'),
-    combinedLogContent: document.getElementById('combinedLogContent'),
-    logsCombinedView: document.getElementById('logsCombinedView'),
-    logsSplitView: document.getElementById('logsSplitView')
+    combinedLogContent: document.getElementById('combinedLogContent')
 };
 
 // State
 let overlay = null;
 let liveLogs = [];           // All logs
 let serverLogs = {};         // Logs by server { 'ip': [{...}, ...] }
-let logsViewMode = 'combined'; // 'combined' or 'split'
-let knownServers = new Set(); // Track servers for filter dropdown
+let currentServerTab = 'all'; // Current selected server tab
+let knownServers = new Set(); // Track servers for tabs
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -85,15 +82,14 @@ function handleLog(data) {
     // Store by server
     if (!serverLogs[serverIP]) {
         serverLogs[serverIP] = [];
-        addServerToFilter(serverIP, hostname);
-        if (logsViewMode === 'split') {
-            createServerLogPanel(serverIP, hostname);
-        }
+        addServerTab(serverIP, hostname);
     }
     serverLogs[serverIP].push(logEntry);
 
-    // Update UI
-    updateLogsUI(logEntry);
+    // Update UI if this server's tab is active or "All" tab
+    if (currentServerTab === 'all' || currentServerTab === serverIP) {
+        appendToLogView(logEntry);
+    }
 
     // Limit memory (keep last 10000 entries)
     if (liveLogs.length > 10000) {
@@ -101,28 +97,23 @@ function handleLog(data) {
     }
 }
 
-function updateLogsUI(logEntry) {
-    const currentFilter = elements.serverFilter?.value || 'all';
-
-    if (logsViewMode === 'combined') {
-        if (currentFilter === 'all' || currentFilter === logEntry.serverIP) {
-            appendToCombinedLog(logEntry);
-        }
-    } else {
-        appendToSplitLog(logEntry);
-    }
-}
-
-function appendToCombinedLog(logEntry) {
+function appendToLogView(logEntry) {
     const logContent = elements.combinedLogContent;
     if (!logContent) return;
 
     const logLine = document.createElement('div');
     logLine.className = 'log-line';
     logLine.dataset.serverIp = logEntry.serverIP;
-    logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
-                        `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
-                        `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
+
+    // Show server name only in "All" tab
+    if (currentServerTab === 'all') {
+        logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
+                            `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
+                            `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
+    } else {
+        logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
+                            `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
+    }
     logContent.appendChild(logLine);
 
     // Auto-scroll
@@ -136,117 +127,45 @@ function appendToCombinedLog(logEntry) {
     }
 }
 
-function appendToSplitLog(logEntry) {
-    const panelId = `log-panel-${logEntry.serverIP.replace(/\./g, '-')}`;
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-
-    const content = panel.querySelector('.panel-content');
-    if (!content) return;
-
-    const logLine = document.createElement('div');
-    logLine.className = 'log-line';
-    logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
-                        `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
-    content.appendChild(logLine);
-
-    // Auto-scroll
-    if (elements.autoScroll?.checked) {
-        content.scrollTop = content.scrollHeight;
-    }
-
-    // Limit DOM nodes
-    while (content.children.length > 2000) {
-        content.removeChild(content.firstChild);
-    }
-}
-
-function addServerToFilter(serverIP, hostname) {
+function addServerTab(serverIP, hostname) {
     if (knownServers.has(serverIP)) return;
     knownServers.add(serverIP);
 
-    const option = document.createElement('option');
-    option.value = serverIP;
-    option.textContent = `${hostname} (${serverIP})`;
-    elements.serverFilter?.appendChild(option);
+    const tabsContainer = document.getElementById('serverTabs');
+    if (!tabsContainer) return;
+
+    const tab = document.createElement('button');
+    tab.className = 'server-tab';
+    tab.dataset.server = serverIP;
+    tab.textContent = hostname;
+    tab.onclick = () => switchServerTab(serverIP);
+    tabsContainer.appendChild(tab);
 }
 
-function createServerLogPanel(serverIP, hostname) {
-    const splitView = elements.logsSplitView;
-    if (!splitView) return;
+function switchServerTab(serverIP) {
+    currentServerTab = serverIP;
 
-    const panelId = `log-panel-${serverIP.replace(/\./g, '-')}`;
-    if (document.getElementById(panelId)) return;
-
-    const panel = document.createElement('div');
-    panel.className = 'server-log-panel';
-    panel.id = panelId;
-    panel.innerHTML = `
-        <div class="panel-header">
-            <span>${escapeHtml(hostname)} (${escapeHtml(serverIP)})</span>
-            <button onclick="closeServerPanel('${escapeHtml(serverIP)}')">X</button>
-        </div>
-        <pre class="panel-content"></pre>
-    `;
-    splitView.appendChild(panel);
-
-    // Populate with existing logs
-    const logs = serverLogs[serverIP] || [];
-    const content = panel.querySelector('.panel-content');
-    logs.forEach(log => {
-        const logLine = document.createElement('div');
-        logLine.className = 'log-line';
-        logLine.innerHTML = `<span class="log-time">[${log.formattedTime}]</span> ` +
-                            `<span class="log-text">${escapeHtml(log.line)}</span>`;
-        content.appendChild(logLine);
-    });
-}
-
-function closeServerPanel(serverIP) {
-    const panelId = `log-panel-${serverIP.replace(/\./g, '-')}`;
-    const panel = document.getElementById(panelId);
-    if (panel) {
-        panel.remove();
-    }
-}
-
-function setLogsView(mode) {
-    logsViewMode = mode;
-
-    // Update toggle buttons
-    document.querySelectorAll('.logs-view-toggle button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.view === mode);
+    // Update tab buttons
+    document.querySelectorAll('.server-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.server === serverIP);
     });
 
-    if (mode === 'combined') {
-        elements.logsCombinedView.style.display = 'block';
-        elements.logsSplitView.style.display = 'none';
-    } else {
-        elements.logsCombinedView.style.display = 'none';
-        elements.logsSplitView.style.display = 'grid';
-
-        // Create panels for all known servers
-        knownServers.forEach(serverIP => {
-            const logs = serverLogs[serverIP];
-            if (logs && logs.length > 0) {
-                createServerLogPanel(serverIP, logs[0].hostname);
-            }
-        });
-    }
-}
-
-function filterLogs() {
-    const filter = elements.serverFilter?.value || 'all';
+    // Clear and repopulate log content
     const logContent = elements.combinedLogContent;
     if (!logContent) return;
+    logContent.innerHTML = '';
 
-    // Show/hide log lines based on filter
-    Array.from(logContent.children).forEach(line => {
-        if (filter === 'all' || line.dataset.serverIp === filter) {
-            line.style.display = '';
-        } else {
-            line.style.display = 'none';
-        }
+    // Get logs to display
+    let logsToShow = [];
+    if (serverIP === 'all') {
+        logsToShow = liveLogs;
+    } else {
+        logsToShow = serverLogs[serverIP] || [];
+    }
+
+    // Populate logs
+    logsToShow.forEach(log => {
+        appendToLogView(log);
     });
 }
 
@@ -254,15 +173,15 @@ function clearLiveLogs() {
     liveLogs = [];
     serverLogs = {};
     knownServers.clear();
+    currentServerTab = 'all';
 
     if (elements.combinedLogContent) {
         elements.combinedLogContent.innerHTML = '';
     }
-    if (elements.logsSplitView) {
-        elements.logsSplitView.innerHTML = '';
-    }
-    if (elements.serverFilter) {
-        elements.serverFilter.innerHTML = '<option value="all">All Servers</option>';
+
+    const tabsContainer = document.getElementById('serverTabs');
+    if (tabsContainer) {
+        tabsContainer.innerHTML = '<button class="server-tab active" data-server="all" onclick="switchServerTab(\'all\')">All</button>';
     }
 }
 
@@ -500,7 +419,5 @@ window.viewLog = viewLog;
 window.closeLogViewer = closeLogViewer;
 window.openLogsFolder = openLogsFolder;
 window.switchTab = switchTab;
-window.setLogsView = setLogsView;
-window.filterLogs = filterLogs;
+window.switchServerTab = switchServerTab;
 window.clearLiveLogs = clearLiveLogs;
-window.closeServerPanel = closeServerPanel;

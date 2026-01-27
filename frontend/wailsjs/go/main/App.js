@@ -38,8 +38,8 @@ export function SelectServersFile() {
   return window['go']['main']['App']['SelectServersFile']();
 }
 
-export function StartExecution(arg1, arg2) {
-  return window['go']['main']['App']['StartExecution'](arg1, arg2);
+export function StartExecution(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartExecution'](arg1, arg2, arg3);
 }
 
 export function StopExecution() {

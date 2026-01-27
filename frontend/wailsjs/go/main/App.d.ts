@@ -20,6 +20,6 @@ export function SelectCommandsFile():Promise<string>;
 
 export function SelectServersFile():Promise<string>;
 
-export function StartExecution(arg1:string,arg2:string):Promise<boolean>;
+export function StartExecution(arg1:string,arg2:string,arg3:number):Promise<boolean>;
 
 export function StopExecution():Promise<void>;

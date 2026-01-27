@@ -118,26 +118,18 @@
                                 <input type="checkbox" id="autoScroll" checked>
                                 Auto-scroll
                             </label>
-                            <select id="serverFilter" onchange="filterLogs()">
-                                <option value="all">All Servers</option>
-                            </select>
                             <button onclick="clearLiveLogs()">Clear</button>
                         </div>
                     </div>
 
-                    <!-- View Toggle -->
-                    <div class="logs-view-toggle">
-                        <button class="active" data-view="combined" onclick="setLogsView('combined')">Combined</button>
-                        <button data-view="split" onclick="setLogsView('split')">Split View</button>
+                    <!-- Server Tabs -->
+                    <div class="server-tabs" id="serverTabs">
+                        <button class="server-tab active" data-server="all" onclick="switchServerTab('all')">All</button>
                     </div>
 
-                    <!-- Combined View -->
-                    <div class="logs-combined-view" id="logsCombinedView">
+                    <!-- Log Content -->
+                    <div class="logs-tab-view">
                         <pre class="live-log-content" id="combinedLogContent"></pre>
-                    </div>
-
-                    <!-- Split View -->
-                    <div class="logs-split-view" id="logsSplitView" style="display: none;">
                     </div>
                 </section>
             </div>
