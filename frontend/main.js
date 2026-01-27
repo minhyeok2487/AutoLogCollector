@@ -37,10 +37,12 @@ let serverLogs = {};         // Logs by server { 'ip': [{...}, ...] }
 let currentServerTab = 'all'; // Current selected server tab
 let knownServers = new Set(); // Track servers for tabs
 let logPanelVisible = false; // Log panel visibility
+let latestUpdateInfo = null; // Store update info for download
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
+    loadVersion();
 });
 
 // Setup Wails event listeners
@@ -51,6 +53,130 @@ function setupEventListeners() {
         window.runtime.EventsOn('completed', handleCompleted);
         window.runtime.EventsOn('error', handleError);
         window.runtime.EventsOn('log', handleLog);
+        window.runtime.EventsOn('updateProgress', handleUpdateProgress);
+        window.runtime.EventsOn('updateError', handleUpdateError);
+        window.runtime.EventsOn('updateComplete', handleUpdateComplete);
+    }
+}
+
+// Load and display version
+async function loadVersion() {
+    try {
+        const version = await runtime.GetCurrentVersion();
+        document.getElementById('versionText').textContent = `v${version}`;
+    } catch (err) {
+        console.error('Failed to load version:', err);
+    }
+}
+
+// Check for updates
+async function checkForUpdates() {
+    const updateBtn = document.getElementById('updateBtn');
+    updateBtn.textContent = 'Checking...';
+    updateBtn.disabled = true;
+
+    try {
+        const info = await runtime.CheckForUpdates();
+
+        if (!info) {
+            updateBtn.textContent = 'Check Updates';
+            updateBtn.disabled = false;
+            return;
+        }
+
+        if (info.available) {
+            latestUpdateInfo = info;
+            updateBtn.textContent = 'Update Available!';
+            updateBtn.classList.add('has-update');
+            showUpdateModal(info);
+        } else {
+            alert('You are using the latest version.');
+            updateBtn.textContent = 'Check Updates';
+        }
+    } catch (err) {
+        showError('Failed to check for updates: ' + err);
+        updateBtn.textContent = 'Check Updates';
+    }
+
+    updateBtn.disabled = false;
+}
+
+// Show update modal
+function showUpdateModal(info) {
+    document.getElementById('updateVersionInfo').innerHTML =
+        `<strong>Current:</strong> ${info.currentVersion}<br>` +
+        `<strong>Latest:</strong> ${info.latestVersion}`;
+
+    document.getElementById('updateReleaseNotes').textContent =
+        info.releaseNotes || 'No release notes available.';
+
+    document.getElementById('updateModal').style.display = 'flex';
+    document.getElementById('updateProgress').style.display = 'none';
+    document.getElementById('downloadUpdateBtn').style.display = 'block';
+    document.getElementById('restartBtn').style.display = 'none';
+}
+
+// Close update modal
+function closeUpdateModal() {
+    document.getElementById('updateModal').style.display = 'none';
+}
+
+// Download and install update
+async function downloadUpdate() {
+    if (!latestUpdateInfo || !latestUpdateInfo.downloadURL) {
+        showError('No download URL available');
+        return;
+    }
+
+    document.getElementById('downloadUpdateBtn').style.display = 'none';
+    document.getElementById('updateProgress').style.display = 'block';
+    document.getElementById('updateProgressText').textContent = 'Starting download...';
+
+    try {
+        const success = await runtime.DownloadAndInstallUpdate(latestUpdateInfo.downloadURL);
+        if (!success) {
+            document.getElementById('downloadUpdateBtn').style.display = 'block';
+            document.getElementById('updateProgress').style.display = 'none';
+        }
+    } catch (err) {
+        showError('Update failed: ' + err);
+        document.getElementById('downloadUpdateBtn').style.display = 'block';
+        document.getElementById('updateProgress').style.display = 'none';
+    }
+}
+
+// Handle update progress
+function handleUpdateProgress(data) {
+    const { downloaded, total, percent } = data;
+    document.getElementById('updateProgressFill').style.width = percent + '%';
+
+    const downloadedMB = (downloaded / 1024 / 1024).toFixed(1);
+    const totalMB = (total / 1024 / 1024).toFixed(1);
+    document.getElementById('updateProgressText').textContent =
+        `Downloading... ${downloadedMB} MB / ${totalMB} MB (${percent.toFixed(0)}%)`;
+}
+
+// Handle update error
+function handleUpdateError(message) {
+    showError(message);
+    document.getElementById('downloadUpdateBtn').style.display = 'block';
+    document.getElementById('updateProgress').style.display = 'none';
+}
+
+// Handle update complete
+function handleUpdateComplete(message) {
+    document.getElementById('updateProgressText').textContent = 'Update installed successfully!';
+    document.getElementById('updateProgressFill').style.width = '100%';
+    document.getElementById('restartBtn').style.display = 'block';
+    alert(message);
+}
+
+// Restart application
+async function restartApp() {
+    try {
+        await runtime.RestartApp();
+    } catch (err) {
+        showError('Failed to restart: ' + err);
     }
 }
 
@@ -428,3 +554,7 @@ window.openLogsFolder = openLogsFolder;
 window.toggleLogPanel = toggleLogPanel;
 window.switchServerTab = switchServerTab;
 window.clearLiveLogs = clearLiveLogs;
+window.checkForUpdates = checkForUpdates;
+window.closeUpdateModal = closeUpdateModal;
+window.downloadUpdate = downloadUpdate;
+window.restartApp = restartApp;

@@ -37,7 +37,13 @@ header h1 {
     font-weight: 600;
 }
 
-.toggle-logs-btn {
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.toggle-logs-btn,
+.update-btn {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -48,8 +54,109 @@ header h1 {
     transition: all 0.2s;
 }
 
-.toggle-logs-btn:hover {
+.toggle-logs-btn:hover,
+.update-btn:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.update-btn.has-update {
+    background: #4caf50;
+    border-color: #4caf50;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.version-text {
+    font-size: 12px;
+    opacity: 0.8;
+    font-weight: normal;
+}
+
+/* Update Modal */
+.update-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.update-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.update-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.update-modal-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    color: #1a73e8;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+.update-modal-body {
+    padding: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.release-notes {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+    font-size: 14px;
+    white-space: pre-wrap;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.update-progress {
+    margin-top: 20px;
+}
+
+.update-modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
 }
 
 /* Main Layout - Side by Side */

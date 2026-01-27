@@ -9,11 +9,39 @@
 <body>
     <div class="container">
         <header>
-            <h1>Cisco Automation Tool</h1>
-            <button class="toggle-logs-btn" onclick="toggleLogPanel()">
-                <span id="logToggleText">Show Logs</span>
-            </button>
+            <h1>Cisco Automation Tool <span id="versionText" class="version-text"></span></h1>
+            <div class="header-buttons">
+                <button class="update-btn" onclick="checkForUpdates()" id="updateBtn">Check Updates</button>
+                <button class="toggle-logs-btn" onclick="toggleLogPanel()">
+                    <span id="logToggleText">Show Logs</span>
+                </button>
+            </div>
         </header>
+
+        <!-- Update Modal -->
+        <div class="update-modal" id="updateModal" style="display: none;">
+            <div class="update-modal-content">
+                <div class="update-modal-header">
+                    <h2>Update Available</h2>
+                    <button class="close-btn" onclick="closeUpdateModal()">&times;</button>
+                </div>
+                <div class="update-modal-body">
+                    <p id="updateVersionInfo"></p>
+                    <div id="updateReleaseNotes" class="release-notes"></div>
+                    <div id="updateProgress" class="update-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="updateProgressFill" style="width: 0%"></div>
+                        </div>
+                        <p id="updateProgressText">Downloading...</p>
+                    </div>
+                </div>
+                <div class="update-modal-footer">
+                    <button id="downloadUpdateBtn" class="primary" onclick="downloadUpdate()">Download & Install</button>
+                    <button id="restartBtn" class="primary" onclick="restartApp()" style="display: none;">Restart Now</button>
+                    <button onclick="closeUpdateModal()">Later</button>
+                </div>
+            </div>
+        </div>
 
         <div class="main-layout">
             <!-- Left Panel - Main Content -->

@@ -10,14 +10,22 @@ import (
 	"sync"
 
 	"cisco-plink/internal/cisco"
+	"cisco-plink/internal/updater"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+// GitHub repository settings for auto-update
+const (
+	GitHubOwner = "your-username"  // GitHub 사용자명으로 변경하세요
+	GitHubRepo  = "cisco-plink"    // GitHub 저장소명으로 변경하세요
 )
 
 // App struct
 type App struct {
 	ctx           context.Context
 	runner        *cisco.Runner
+	updater       *updater.Updater
 	mu            sync.Mutex
 	serversFile   string
 	commandsFile  string
@@ -33,6 +41,7 @@ func NewApp() *App {
 // startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.updater = updater.NewUpdater(GitHubOwner, GitHubRepo)
 }
 
 // SelectServersFile opens a file dialog to select servers CSV file
@@ -270,4 +279,59 @@ func (a *App) GetCurrentLogDir() string {
 		return a.runner.LogDir
 	}
 	return ""
+}
+
+// GetCurrentVersion returns the current application version
+func (a *App) GetCurrentVersion() string {
+	return a.updater.GetCurrentVersion()
+}
+
+// CheckForUpdates checks for available updates
+func (a *App) CheckForUpdates() *updater.UpdateInfo {
+	info, err := a.updater.CheckForUpdates()
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "updateError", err.Error())
+		return nil
+	}
+	return info
+}
+
+// DownloadAndInstallUpdate downloads and installs the update
+func (a *App) DownloadAndInstallUpdate(downloadURL string) bool {
+	// Download with progress updates
+	tempFile, err := a.updater.DownloadUpdate(downloadURL, func(downloaded, total int64) {
+		percent := float64(downloaded) / float64(total) * 100
+		runtime.EventsEmit(a.ctx, "updateProgress", map[string]interface{}{
+			"downloaded": downloaded,
+			"total":      total,
+			"percent":    percent,
+		})
+	})
+
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "updateError", "Download failed: "+err.Error())
+		return false
+	}
+
+	// Apply the update
+	if err := a.updater.ApplyUpdate(tempFile); err != nil {
+		runtime.EventsEmit(a.ctx, "updateError", "Install failed: "+err.Error())
+		return false
+	}
+
+	runtime.EventsEmit(a.ctx, "updateComplete", "Update installed successfully. Please restart the application.")
+	return true
+}
+
+// RestartApp restarts the application
+func (a *App) RestartApp() {
+	exePath, err := os.Executable()
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "updateError", "Failed to restart: "+err.Error())
+		return
+	}
+
+	cmd := exec.Command(exePath)
+	cmd.Start()
+	os.Exit(0)
 }
