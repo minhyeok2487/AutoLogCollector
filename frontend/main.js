@@ -36,6 +36,7 @@ let liveLogs = [];           // All logs
 let serverLogs = {};         // Logs by server { 'ip': [{...}, ...] }
 let currentServerTab = 'all'; // Current selected server tab
 let knownServers = new Set(); // Track servers for tabs
+let logPanelVisible = false; // Log panel visibility
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,14 +54,20 @@ function setupEventListeners() {
     }
 }
 
-// Tab switching
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `tab-${tabName}`);
-    });
+// Toggle log panel visibility
+function toggleLogPanel() {
+    const logsPanel = document.getElementById('logsPanel');
+    const toggleText = document.getElementById('logToggleText');
+
+    logPanelVisible = !logPanelVisible;
+
+    if (logPanelVisible) {
+        logsPanel.classList.add('visible');
+        toggleText.textContent = 'Hide Logs';
+    } else {
+        logsPanel.classList.remove('visible');
+        toggleText.textContent = 'Show Logs';
+    }
 }
 
 // Live Logs handling
@@ -418,6 +425,6 @@ window.stopExecution = stopExecution;
 window.viewLog = viewLog;
 window.closeLogViewer = closeLogViewer;
 window.openLogsFolder = openLogsFolder;
-window.switchTab = switchTab;
+window.toggleLogPanel = toggleLogPanel;
 window.switchServerTab = switchServerTab;
 window.clearLiveLogs = clearLiveLogs;
