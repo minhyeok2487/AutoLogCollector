@@ -17,20 +17,18 @@ import (
 
 // GitHub repository settings for auto-update
 const (
-	GitHubOwner = "your-username"  // GitHub 사용자명으로 변경하세요
-	GitHubRepo  = "cisco-plink"    // GitHub 저장소명으로 변경하세요
+	GitHubOwner = "your-username"
+	GitHubRepo  = "cisco-plink"
 )
 
 // App struct
 type App struct {
-	ctx           context.Context
-	runner        *cisco.Runner
-	updater       *updater.Updater
-	mu            sync.Mutex
-	serversFile   string
-	commandsFile  string
-	servers       []cisco.Server
-	commands      []string
+	ctx      context.Context
+	runner   *cisco.Runner
+	updater  *updater.Updater
+	mu       sync.Mutex
+	servers  []cisco.Server
+	commands []string
 }
 
 // NewApp creates a new App application struct
@@ -42,66 +40,6 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.updater = updater.NewUpdater(GitHubOwner, GitHubRepo)
-}
-
-// SelectServersFile opens a file dialog to select servers CSV file
-func (a *App) SelectServersFile() string {
-	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Servers CSV File",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "CSV Files (*.csv)", Pattern: "*.csv"},
-			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
-		},
-	})
-	if err != nil || file == "" {
-		return ""
-	}
-	a.serversFile = file
-	return file
-}
-
-// SelectCommandsFile opens a file dialog to select commands file
-func (a *App) SelectCommandsFile() string {
-	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Commands File",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"},
-			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
-		},
-	})
-	if err != nil || file == "" {
-		return ""
-	}
-	a.commandsFile = file
-	return file
-}
-
-// PreviewServers loads and returns the list of servers from the selected file
-func (a *App) PreviewServers() []cisco.Server {
-	if a.serversFile == "" {
-		return nil
-	}
-	servers, err := cisco.LoadServers(a.serversFile)
-	if err != nil {
-		runtime.EventsEmit(a.ctx, "error", "Failed to load servers: "+err.Error())
-		return nil
-	}
-	a.servers = servers
-	return servers
-}
-
-// PreviewCommands loads and returns the commands from the selected file
-func (a *App) PreviewCommands() []string {
-	if a.commandsFile == "" {
-		return nil
-	}
-	commands, err := cisco.LoadCommands(a.commandsFile)
-	if err != nil {
-		runtime.EventsEmit(a.ctx, "error", "Failed to load commands: "+err.Error())
-		return nil
-	}
-	a.commands = commands
-	return commands
 }
 
 // SetServers sets the server list from GUI input
@@ -158,7 +96,6 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 		return nil
 	}
 
-	// Convert to map format for JavaScript
 	result := make([]map[string]string, len(servers))
 	for i, s := range servers {
 		result[i] = map[string]string{
@@ -204,7 +141,6 @@ func (a *App) StartExecution(username, password string, concurrent int) bool {
 
 	a.runner = cisco.NewRunner(a.servers, a.commands, creds, concurrent)
 
-	// Set progress callback
 	a.runner.OnProgress = func(current, total int, server cisco.Server, status string) {
 		runtime.EventsEmit(a.ctx, "progress", map[string]interface{}{
 			"current":  current,
@@ -215,7 +151,6 @@ func (a *App) StartExecution(username, password string, concurrent int) bool {
 		})
 	}
 
-	// Set log callback for real-time logging
 	a.runner.OnLog = func(serverIP, hostname, line string) {
 		runtime.EventsEmit(a.ctx, "log", map[string]interface{}{
 			"serverIP": serverIP,
@@ -224,9 +159,7 @@ func (a *App) StartExecution(username, password string, concurrent int) bool {
 		})
 	}
 
-	// Set result callback
 	a.runner.OnResult = func(result cisco.ExecutionResult) {
-		// Convert backslashes to forward slashes for JavaScript compatibility
 		logPath := strings.ReplaceAll(result.LogPath, "\\", "/")
 		runtime.EventsEmit(a.ctx, "result", map[string]interface{}{
 			"hostname": result.Server.Hostname,
@@ -237,7 +170,6 @@ func (a *App) StartExecution(username, password string, concurrent int) bool {
 			"duration": result.Duration,
 		})
 
-		// Check if all done
 		success, fail, total := a.runner.GetSummary()
 		if success+fail == total {
 			runtime.EventsEmit(a.ctx, "completed", map[string]interface{}{
@@ -285,16 +217,13 @@ func (a *App) OpenLogsFolder() {
 		logsDir = a.runner.LogDir
 	}
 
-	// Create logs directory if it doesn't exist
 	os.MkdirAll(logsDir, 0755)
 
-	// Get absolute path
 	absPath, err := filepath.Abs(logsDir)
 	if err != nil {
 		absPath = logsDir
 	}
 
-	// Open folder using explorer.exe on Windows
 	exec.Command("explorer.exe", absPath).Start()
 }
 
@@ -303,13 +232,11 @@ func (a *App) GetLogFiles() []map[string]string {
 	logsDir := "logs"
 	var files []map[string]string
 
-	// Walk through logs directory
 	filepath.Walk(logsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
 		if !info.IsDir() && filepath.Ext(path) == ".log" {
-			// Convert backslashes to forward slashes for JavaScript compatibility
 			normalizedPath := strings.ReplaceAll(path, "\\", "/")
 			files = append(files, map[string]string{
 				"name":    info.Name(),
@@ -321,7 +248,6 @@ func (a *App) GetLogFiles() []map[string]string {
 		return nil
 	})
 
-	// Sort by modification time (newest first)
 	sort.Slice(files, func(i, j int) bool {
 		return files[i]["modTime"] > files[j]["modTime"]
 	})
@@ -363,7 +289,6 @@ func (a *App) CheckForUpdates() *updater.UpdateInfo {
 
 // DownloadAndInstallUpdate downloads and installs the update
 func (a *App) DownloadAndInstallUpdate(downloadURL string) bool {
-	// Download with progress updates
 	tempFile, err := a.updater.DownloadUpdate(downloadURL, func(downloaded, total int64) {
 		percent := float64(downloaded) / float64(total) * 100
 		runtime.EventsEmit(a.ctx, "updateProgress", map[string]interface{}{
@@ -378,7 +303,6 @@ func (a *App) DownloadAndInstallUpdate(downloadURL string) bool {
 		return false
 	}
 
-	// Apply the update
 	if err := a.updater.ApplyUpdate(tempFile); err != nil {
 		runtime.EventsEmit(a.ctx, "updateError", "Install failed: "+err.Error())
 		return false
@@ -415,10 +339,8 @@ func (a *App) ExportResults() string {
 		return ""
 	}
 
-	// Create output path
 	outputPath := filepath.Join(a.runner.LogDir, "results.xlsx")
 
-	// Export to Excel
 	err := cisco.ExportToExcel(results, a.commands, outputPath)
 	if err != nil {
 		runtime.EventsEmit(a.ctx, "error", "Failed to export Excel: "+err.Error())

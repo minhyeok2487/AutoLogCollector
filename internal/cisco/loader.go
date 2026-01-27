@@ -3,26 +3,10 @@ package cisco
 import (
 	"bufio"
 	"encoding/csv"
-	"encoding/json"
 	"io"
 	"os"
 	"strings"
 )
-
-// LoadCredentials reads credentials from JSON file
-func LoadCredentials(path string) (*Credentials, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var creds Credentials
-	if err := json.Unmarshal(data, &creds); err != nil {
-		return nil, err
-	}
-
-	return &creds, nil
-}
 
 // LoadServers reads server list from CSV file
 func LoadServers(path string) ([]Server, error) {

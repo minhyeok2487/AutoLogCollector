@@ -38,28 +38,12 @@ export function OpenLogsFolder() {
   return window['go']['main']['App']['OpenLogsFolder']();
 }
 
-export function PreviewCommands() {
-  return window['go']['main']['App']['PreviewCommands']();
-}
-
-export function PreviewServers() {
-  return window['go']['main']['App']['PreviewServers']();
-}
-
 export function ReadLogFile(arg1) {
   return window['go']['main']['App']['ReadLogFile'](arg1);
 }
 
 export function RestartApp() {
   return window['go']['main']['App']['RestartApp']();
-}
-
-export function SelectCommandsFile() {
-  return window['go']['main']['App']['SelectCommandsFile']();
-}
-
-export function SelectServersFile() {
-  return window['go']['main']['App']['SelectServersFile']();
 }
 
 export function SetCommands(arg1) {

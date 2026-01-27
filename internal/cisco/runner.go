@@ -174,7 +174,7 @@ func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
 			}
 		}
 
-		output, err := ExecuteCommandsWithLog(server, r.Credentials, r.Commands, logCallback)
+		output, err := ExecuteCommands(server, r.Credentials, r.Commands, logCallback)
 		result.Duration = time.Since(startTime).Milliseconds()
 
 		if err != nil {
