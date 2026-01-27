@@ -26,6 +26,10 @@ export function GetLogFiles() {
   return window['go']['main']['App']['GetLogFiles']();
 }
 
+export function ImportServersFromCSV() {
+  return window['go']['main']['App']['ImportServersFromCSV']();
+}
+
 export function IsRunning() {
   return window['go']['main']['App']['IsRunning']();
 }
@@ -56,6 +60,14 @@ export function SelectCommandsFile() {
 
 export function SelectServersFile() {
   return window['go']['main']['App']['SelectServersFile']();
+}
+
+export function SetCommands(arg1) {
+  return window['go']['main']['App']['SetCommands'](arg1);
+}
+
+export function SetServers(arg1) {
+  return window['go']['main']['App']['SetServers'](arg1);
 }
 
 export function StartExecution(arg1, arg2, arg3) {

@@ -6,8 +6,8 @@ const elements = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
     concurrent: document.getElementById('concurrent'),
-    serversFile: document.getElementById('serversFile'),
-    commandsFile: document.getElementById('commandsFile'),
+    serversBody: document.getElementById('serversBody'),
+    commandsInput: document.getElementById('commandsInput'),
     runBtn: document.getElementById('runBtn'),
     stopBtn: document.getElementById('stopBtn'),
     serverCount: document.getElementById('serverCount'),
@@ -23,24 +23,25 @@ const elements = {
     logTitle: document.getElementById('logTitle'),
     logContent: document.getElementById('logContent'),
     statusText: document.getElementById('statusText'),
-    // Live Logs elements
     autoScroll: document.getElementById('autoScroll'),
     combinedLogContent: document.getElementById('combinedLogContent')
 };
 
 // State
 let overlay = null;
-let liveLogs = [];           // All logs
-let serverLogs = {};         // Logs by server { 'ip': [{...}, ...] }
-let currentServerTab = 'all'; // Current selected server tab
-let knownServers = new Set(); // Track servers for tabs
-let logPanelVisible = false; // Log panel visibility
-let latestUpdateInfo = null; // Store update info for download
+let liveLogs = [];
+let serverLogs = {};
+let currentServerTab = 'all';
+let knownServers = new Set();
+let logPanelVisible = false;
+let latestUpdateInfo = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadVersion();
+    setupInputListeners();
+    addServerRow(); // Add one empty row by default
 });
 
 // Setup Wails event listeners
@@ -57,6 +58,13 @@ function setupEventListeners() {
     }
 }
 
+// Setup input listeners for counting
+function setupInputListeners() {
+    if (elements.commandsInput) {
+        elements.commandsInput.addEventListener('input', updateCommandCount);
+    }
+}
+
 // Load and display version
 async function loadVersion() {
     try {
@@ -67,7 +75,97 @@ async function loadVersion() {
     }
 }
 
-// Settings menu toggle
+// ==================== Server Table Management ====================
+
+function addServerRow(ip = '', hostname = '') {
+    const tbody = elements.serversBody;
+    if (!tbody) return;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" placeholder="192.168.1.1" value="${escapeHtml(ip)}" onchange="updateServerCount()"></td>
+        <td><input type="text" placeholder="Router1" value="${escapeHtml(hostname)}" onchange="updateServerCount()"></td>
+        <td><button type="button" class="delete-btn" onclick="removeServerRow(this)">&times;</button></td>
+    `;
+    tbody.appendChild(row);
+    updateServerCount();
+
+    // Focus on the IP input of the new row
+    const ipInput = row.querySelector('input');
+    if (ipInput && !ip) {
+        ipInput.focus();
+    }
+}
+
+function removeServerRow(btn) {
+    const row = btn.closest('tr');
+    if (row) {
+        row.remove();
+        updateServerCount();
+    }
+}
+
+function updateServerCount() {
+    const servers = getServersFromTable();
+    elements.serverCount.textContent = `(${servers.length})`;
+}
+
+function getServersFromTable() {
+    const rows = elements.serversBody?.querySelectorAll('tr') || [];
+    const servers = [];
+
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length >= 2) {
+            const ip = inputs[0].value.trim();
+            const hostname = inputs[1].value.trim();
+            if (ip) {
+                servers.push({ ip, hostname: hostname || ip });
+            }
+        }
+    });
+
+    return servers;
+}
+
+function clearServersTable() {
+    if (elements.serversBody) {
+        elements.serversBody.innerHTML = '';
+    }
+    updateServerCount();
+}
+
+// Import CSV file
+async function importCSV() {
+    try {
+        const servers = await runtime.ImportServersFromCSV();
+        if (servers && servers.length > 0) {
+            clearServersTable();
+            servers.forEach(server => {
+                addServerRow(server.ip, server.hostname);
+            });
+        }
+    } catch (err) {
+        showError('Failed to import CSV: ' + err);
+    }
+}
+
+// ==================== Commands Management ====================
+
+function getCommandsFromTextarea() {
+    const text = elements.commandsInput?.value || '';
+    return text.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+}
+
+function updateCommandCount() {
+    const commands = getCommandsFromTextarea();
+    elements.commandCount.textContent = `(${commands.length})`;
+}
+
+// ==================== Settings Menu ====================
+
 function toggleSettingsMenu() {
     const menu = document.getElementById('settingsMenu');
     menu.classList.toggle('show');
@@ -78,21 +176,18 @@ function closeSettingsMenu() {
     menu.classList.remove('show');
 }
 
-// Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.icon-dropdown')) {
         closeSettingsMenu();
     }
 });
 
-// Check for updates
+// ==================== Update Functions ====================
+
 async function checkForUpdates() {
     try {
         const info = await runtime.CheckForUpdates();
-
-        if (!info) {
-            return;
-        }
+        if (!info) return;
 
         if (info.available) {
             latestUpdateInfo = info;
@@ -105,7 +200,6 @@ async function checkForUpdates() {
     }
 }
 
-// Show update modal
 function showUpdateModal(info) {
     document.getElementById('updateVersionInfo').innerHTML =
         `<strong>Current:</strong> ${info.currentVersion}<br>` +
@@ -120,12 +214,10 @@ function showUpdateModal(info) {
     document.getElementById('restartBtn').style.display = 'none';
 }
 
-// Close update modal
 function closeUpdateModal() {
     document.getElementById('updateModal').style.display = 'none';
 }
 
-// Download and install update
 async function downloadUpdate() {
     if (!latestUpdateInfo || !latestUpdateInfo.downloadURL) {
         showError('No download URL available');
@@ -149,7 +241,6 @@ async function downloadUpdate() {
     }
 }
 
-// Handle update progress
 function handleUpdateProgress(data) {
     const { downloaded, total, percent } = data;
     document.getElementById('updateProgressFill').style.width = percent + '%';
@@ -160,14 +251,12 @@ function handleUpdateProgress(data) {
         `Downloading... ${downloadedMB} MB / ${totalMB} MB (${percent.toFixed(0)}%)`;
 }
 
-// Handle update error
 function handleUpdateError(message) {
     showError(message);
     document.getElementById('downloadUpdateBtn').style.display = 'block';
     document.getElementById('updateProgress').style.display = 'none';
 }
 
-// Handle update complete
 function handleUpdateComplete(message) {
     document.getElementById('updateProgressText').textContent = 'Update installed successfully!';
     document.getElementById('updateProgressFill').style.width = '100%';
@@ -175,7 +264,6 @@ function handleUpdateComplete(message) {
     alert(message);
 }
 
-// Restart application
 async function restartApp() {
     try {
         await runtime.RestartApp();
@@ -184,23 +272,19 @@ async function restartApp() {
     }
 }
 
-// Toggle log panel visibility
+// ==================== Log Panel ====================
+
 function toggleLogPanel() {
     const logsPanel = document.getElementById('logsPanel');
-    const toggleText = document.getElementById('logToggleText');
-
     logPanelVisible = !logPanelVisible;
 
     if (logPanelVisible) {
         logsPanel.classList.add('visible');
-        toggleText.textContent = 'Hide Logs';
     } else {
         logsPanel.classList.remove('visible');
-        toggleText.textContent = 'Show Logs';
     }
 }
 
-// Live Logs handling
 function handleLog(data) {
     const { serverIP, hostname, line } = data;
     const timestamp = Date.now();
@@ -213,22 +297,18 @@ function handleLog(data) {
         formattedTime: new Date(timestamp).toLocaleTimeString()
     };
 
-    // Store log
     liveLogs.push(logEntry);
 
-    // Store by server
     if (!serverLogs[serverIP]) {
         serverLogs[serverIP] = [];
         addServerTab(serverIP, hostname);
     }
     serverLogs[serverIP].push(logEntry);
 
-    // Update UI if this server's tab is active or "All" tab
     if (currentServerTab === 'all' || currentServerTab === serverIP) {
         appendToLogView(logEntry);
     }
 
-    // Limit memory (keep last 10000 entries)
     if (liveLogs.length > 10000) {
         liveLogs.shift();
     }
@@ -242,7 +322,6 @@ function appendToLogView(logEntry) {
     logLine.className = 'log-line';
     logLine.dataset.serverIp = logEntry.serverIP;
 
-    // Show server name only in "All" tab
     if (currentServerTab === 'all') {
         logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
                             `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
@@ -253,12 +332,10 @@ function appendToLogView(logEntry) {
     }
     logContent.appendChild(logLine);
 
-    // Auto-scroll
     if (elements.autoScroll?.checked) {
         logContent.scrollTop = logContent.scrollHeight;
     }
 
-    // Limit DOM nodes
     while (logContent.children.length > 5000) {
         logContent.removeChild(logContent.firstChild);
     }
@@ -282,28 +359,16 @@ function addServerTab(serverIP, hostname) {
 function switchServerTab(serverIP) {
     currentServerTab = serverIP;
 
-    // Update tab buttons
     document.querySelectorAll('.server-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.server === serverIP);
     });
 
-    // Clear and repopulate log content
     const logContent = elements.combinedLogContent;
     if (!logContent) return;
     logContent.innerHTML = '';
 
-    // Get logs to display
-    let logsToShow = [];
-    if (serverIP === 'all') {
-        logsToShow = liveLogs;
-    } else {
-        logsToShow = serverLogs[serverIP] || [];
-    }
-
-    // Populate logs
-    logsToShow.forEach(log => {
-        appendToLogView(log);
-    });
+    let logsToShow = serverIP === 'all' ? liveLogs : (serverLogs[serverIP] || []);
+    logsToShow.forEach(log => appendToLogView(log));
 }
 
 function clearLiveLogs() {
@@ -322,59 +387,8 @@ function clearLiveLogs() {
     }
 }
 
-// File selection
-async function selectServersFile() {
-    try {
-        const file = await runtime.SelectServersFile();
-        if (file) {
-            elements.serversFile.value = file;
-            await previewServers();
-        }
-    } catch (err) {
-        showError('Failed to select file: ' + err);
-    }
-}
+// ==================== Execution Control ====================
 
-async function selectCommandsFile() {
-    try {
-        const file = await runtime.SelectCommandsFile();
-        if (file) {
-            elements.commandsFile.value = file;
-            await previewCommands();
-        }
-    } catch (err) {
-        showError('Failed to select file: ' + err);
-    }
-}
-
-// Preview functions
-async function previewServers() {
-    try {
-        const servers = await runtime.PreviewServers();
-        if (servers && servers.length > 0) {
-            elements.serverCount.textContent = `(${servers.length})`;
-        } else {
-            elements.serverCount.textContent = '';
-        }
-    } catch (err) {
-        showError('Failed to preview servers: ' + err);
-    }
-}
-
-async function previewCommands() {
-    try {
-        const commands = await runtime.PreviewCommands();
-        if (commands && commands.length > 0) {
-            elements.commandCount.textContent = `(${commands.length})`;
-        } else {
-            elements.commandCount.textContent = '';
-        }
-    } catch (err) {
-        showError('Failed to preview commands: ' + err);
-    }
-}
-
-// Execution control
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
@@ -385,20 +399,25 @@ async function startExecution() {
         return;
     }
 
-    if (!elements.serversFile.value) {
-        showError('Please select a servers file');
+    const servers = getServersFromTable();
+    if (servers.length === 0) {
+        showError('Please add at least one server');
         return;
     }
 
-    if (!elements.commandsFile.value) {
-        showError('Please select a commands file');
+    const commands = getCommandsFromTextarea();
+    if (commands.length === 0) {
+        showError('Please enter at least one command');
         return;
     }
 
-    // Clear previous logs
     clearLiveLogs();
 
     try {
+        // Send servers and commands to backend
+        await runtime.SetServers(servers);
+        await runtime.SetCommands(commands);
+
         const success = await runtime.StartExecution(username, password, concurrent);
         if (success) {
             setRunningState(true);
@@ -426,7 +445,8 @@ async function stopExecution() {
     }
 }
 
-// Event handlers
+// ==================== Event Handlers ====================
+
 function handleProgress(data) {
     const { current, total, hostname, ip, status } = data;
     const percent = (current / total) * 100;
@@ -479,14 +499,14 @@ function handleError(message) {
     showError(message);
 }
 
-// Log viewer
+// ==================== Log Viewer ====================
+
 async function viewLog(path, hostname) {
     try {
         const content = await runtime.ReadLogFile(path);
         elements.logTitle.textContent = hostname + '.log';
         elements.logContent.textContent = content;
 
-        // Show overlay
         overlay = document.createElement('div');
         overlay.className = 'overlay';
         overlay.onclick = closeLogViewer;
@@ -506,7 +526,6 @@ function closeLogViewer() {
     }
 }
 
-// Open logs folder
 async function openLogsFolder() {
     try {
         await runtime.OpenLogsFolder();
@@ -515,7 +534,6 @@ async function openLogsFolder() {
     }
 }
 
-// Export results to Excel
 async function exportResults() {
     try {
         const path = await runtime.ExportResults();
@@ -529,13 +547,23 @@ async function exportResults() {
     }
 }
 
-// UI helpers
+// ==================== UI Helpers ====================
+
 function setRunningState(running) {
     elements.runBtn.disabled = running;
     elements.stopBtn.disabled = !running;
     elements.username.disabled = running;
     elements.password.disabled = running;
     elements.concurrent.disabled = running;
+
+    // Disable server table inputs
+    const serverInputs = elements.serversBody?.querySelectorAll('input, button') || [];
+    serverInputs.forEach(el => el.disabled = running);
+
+    // Disable commands textarea
+    if (elements.commandsInput) {
+        elements.commandsInput.disabled = running;
+    }
 }
 
 function setStatus(text) {
@@ -553,9 +581,12 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Expose functions to window for onclick handlers
-window.selectServersFile = selectServersFile;
-window.selectCommandsFile = selectCommandsFile;
+// ==================== Expose Functions ====================
+
+window.addServerRow = addServerRow;
+window.removeServerRow = removeServerRow;
+window.importCSV = importCSV;
+window.updateServerCount = updateServerCount;
 window.startExecution = startExecution;
 window.stopExecution = stopExecution;
 window.viewLog = viewLog;

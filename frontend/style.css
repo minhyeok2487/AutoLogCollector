@@ -317,36 +317,147 @@ h3 {
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
-.file-input {
+/* Input Sections */
+.input-section {
+    margin-bottom: 15px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.section-header label {
+    font-weight: 500;
+    color: #555;
+    font-size: 13px;
+}
+
+.item-count {
+    color: #1a73e8;
+    font-weight: 600;
+}
+
+.section-actions {
     display: flex;
     gap: 8px;
-    align-items: center;
 }
 
-.file-input input {
-    flex: 1;
-    background: #f8f9fa;
-}
-
-.file-count {
+.section-actions button {
+    padding: 6px 12px;
     font-size: 12px;
-    color: #1a73e8;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.file-input button {
-    padding: 10px 16px;
     background: #f1f3f4;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 13px;
     transition: background 0.2s;
 }
 
-.file-input button:hover {
+.section-actions button:hover {
     background: #e8eaed;
+}
+
+/* Servers Table */
+.servers-table-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.servers-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.servers-table th {
+    background: #f8f9fa;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 500;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+}
+
+.servers-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.servers-table th:last-child,
+.servers-table td:last-child {
+    width: 40px;
+    text-align: center;
+}
+
+.servers-table input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.servers-table input:hover {
+    background: #f8f9fa;
+}
+
+.servers-table input:focus {
+    outline: none;
+    border-color: #1a73e8;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+}
+
+.servers-table .delete-btn {
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.servers-table .delete-btn:hover {
+    background: #fee2e2;
+    color: #dc3545;
+}
+
+.servers-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Commands Textarea */
+.commands-textarea {
+    width: 100%;
+    min-height: 100px;
+    max-height: 150px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.commands-textarea:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.commands-textarea::placeholder {
+    color: #aaa;
 }
 
 /* Button Styles */

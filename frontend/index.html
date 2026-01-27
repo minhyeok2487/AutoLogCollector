@@ -72,26 +72,40 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group form-group-file">
-                            <label>Servers</label>
-                            <div class="file-input">
-                                <input type="text" id="serversFile" readonly placeholder="Select CSV file...">
-                                <span class="file-count" id="serverCount"></span>
-                                <button onclick="selectServersFile()">Browse</button>
+                    <!-- Servers Section -->
+                    <div class="input-section">
+                        <div class="section-header">
+                            <label>Servers <span class="item-count" id="serverCount">(0)</span></label>
+                            <div class="section-actions">
+                                <button type="button" onclick="importCSV()">Import CSV</button>
+                                <button type="button" onclick="addServerRow()">+ Add</button>
                             </div>
+                        </div>
+                        <div class="servers-table-container">
+                            <table class="servers-table" id="serversTable">
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Hostname</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="serversBody">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group form-group-file">
-                            <label>Commands</label>
-                            <div class="file-input">
-                                <input type="text" id="commandsFile" readonly placeholder="Select TXT file...">
-                                <span class="file-count" id="commandCount"></span>
-                                <button onclick="selectCommandsFile()">Browse</button>
-                            </div>
+                    <!-- Commands Section -->
+                    <div class="input-section">
+                        <div class="section-header">
+                            <label>Commands <span class="item-count" id="commandCount">(0)</span></label>
                         </div>
+                        <textarea id="commandsInput" class="commands-textarea" placeholder="Enter commands (one per line)...
+Example:
+show version
+show ip int br
+show run"></textarea>
                     </div>
 
                     <div class="button-group">

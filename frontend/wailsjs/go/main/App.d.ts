@@ -15,6 +15,8 @@ export function GetCurrentVersion():Promise<string>;
 
 export function GetLogFiles():Promise<Array<Record<string, string>>>;
 
+export function ImportServersFromCSV():Promise<Array<Record<string, string>>>;
+
 export function IsRunning():Promise<boolean>;
 
 export function OpenLogsFolder():Promise<void>;
@@ -30,6 +32,10 @@ export function RestartApp():Promise<void>;
 export function SelectCommandsFile():Promise<string>;
 
 export function SelectServersFile():Promise<string>;
+
+export function SetCommands(arg1:Array<string>):Promise<void>;
+
+export function SetServers(arg1:Array<Record<string, string>>):Promise<void>;
 
 export function StartExecution(arg1:string,arg2:string,arg3:number):Promise<boolean>;
 

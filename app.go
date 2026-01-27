@@ -104,6 +104,71 @@ func (a *App) PreviewCommands() []string {
 	return commands
 }
 
+// SetServers sets the server list from GUI input
+func (a *App) SetServers(servers []map[string]string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.servers = make([]cisco.Server, 0, len(servers))
+	for _, s := range servers {
+		ip := s["ip"]
+		hostname := s["hostname"]
+		if ip != "" {
+			if hostname == "" {
+				hostname = ip
+			}
+			a.servers = append(a.servers, cisco.Server{
+				IP:       ip,
+				Hostname: hostname,
+			})
+		}
+	}
+}
+
+// SetCommands sets the command list from GUI input
+func (a *App) SetCommands(commands []string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.commands = make([]string, 0, len(commands))
+	for _, cmd := range commands {
+		cmd = strings.TrimSpace(cmd)
+		if cmd != "" {
+			a.commands = append(a.commands, cmd)
+		}
+	}
+}
+
+// ImportServersFromCSV opens file dialog and returns parsed servers
+func (a *App) ImportServersFromCSV() []map[string]string {
+	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Servers from CSV",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "CSV Files (*.csv)", Pattern: "*.csv"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil || file == "" {
+		return nil
+	}
+
+	servers, err := cisco.LoadServers(file)
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to load CSV: "+err.Error())
+		return nil
+	}
+
+	// Convert to map format for JavaScript
+	result := make([]map[string]string, len(servers))
+	for i, s := range servers {
+		result[i] = map[string]string{
+			"ip":       s.IP,
+			"hostname": s.Hostname,
+		}
+	}
+	return result
+}
+
 // StartExecution begins the command execution
 func (a *App) StartExecution(username, password string, concurrent int) bool {
 	a.mu.Lock()
