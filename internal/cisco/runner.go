@@ -10,20 +10,21 @@ import (
 
 // Runner orchestrates command execution across multiple servers
 type Runner struct {
-	Servers       []Server
-	Commands      []string
-	Credentials   *Credentials
-	LogDir        string
-	MaxConcurrent int // Maximum number of concurrent executions
-	OnProgress    ProgressCallback
-	OnResult      ResultCallback
-	ctx           context.Context
-	cancel        context.CancelFunc
-	mu            sync.Mutex
-	isRunning     bool
-	results       []ExecutionResult
-	successCount  int
-	failCount     int
+	Servers        []Server
+	Commands       []string
+	Credentials    *Credentials
+	LogDir         string
+	MaxConcurrent  int // Maximum number of concurrent executions
+	OnProgress     ProgressCallback
+	OnResult       ResultCallback
+	OnLog          LogCallback // Real-time log callback
+	ctx            context.Context
+	cancel         context.CancelFunc
+	mu             sync.Mutex
+	isRunning      bool
+	results        []ExecutionResult
+	successCount   int
+	failCount      int
 	completedCount int
 }
 
@@ -165,7 +166,15 @@ func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
 			Server: server,
 		}
 
-		output, err := ExecuteCommands(server, r.Credentials, r.Commands)
+		// Create log callback for this server
+		var logCallback func(line string)
+		if r.OnLog != nil {
+			logCallback = func(line string) {
+				r.OnLog(server.IP, server.Hostname, line)
+			}
+		}
+
+		output, err := ExecuteCommandsWithLog(server, r.Credentials, r.Commands, logCallback)
 		result.Duration = time.Since(startTime).Milliseconds()
 
 		if err != nil {

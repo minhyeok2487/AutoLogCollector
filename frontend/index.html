@@ -12,94 +12,137 @@
             <h1>Cisco Automation Tool</h1>
         </header>
 
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="main" onclick="switchTab('main')">Main</button>
+            <button class="tab-btn" data-tab="live-logs" onclick="switchTab('live-logs')">Live Logs</button>
+        </nav>
+
         <main>
-            <!-- Configuration Section -->
-            <section class="config-section">
-                <h2>Configuration</h2>
+            <!-- Main Tab -->
+            <div class="tab-content active" id="tab-main">
+                <!-- Configuration Section -->
+                <section class="config-section">
+                    <h2>Configuration</h2>
 
-                <div class="form-group">
-                    <label>Username:</label>
-                    <input type="text" id="username" placeholder="Enter SSH username">
-                </div>
-
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" id="password" placeholder="Enter SSH password">
-                </div>
-
-                <div class="form-group">
-                    <label>Concurrent:</label>
-                    <input type="number" id="concurrent" min="1" max="50" value="5" placeholder="Parallel connections">
-                </div>
-
-                <div class="form-group">
-                    <label>Servers File:</label>
-                    <div class="file-input">
-                        <input type="text" id="serversFile" readonly placeholder="Select servers CSV file...">
-                        <button onclick="selectServersFile()">Browse</button>
+                    <div class="form-group">
+                        <label>Username:</label>
+                        <input type="text" id="username" placeholder="Enter SSH username">
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Commands File:</label>
-                    <div class="file-input">
-                        <input type="text" id="commandsFile" readonly placeholder="Select commands TXT file...">
-                        <button onclick="selectCommandsFile()">Browse</button>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="password" placeholder="Enter SSH password">
                     </div>
-                </div>
 
-                <div class="button-group">
-                    <button id="runBtn" class="primary" onclick="startExecution()">Run</button>
-                    <button id="stopBtn" class="danger" onclick="stopExecution()" disabled>Stop</button>
-                </div>
-            </section>
-
-            <!-- Preview Section -->
-            <section class="preview-section">
-                <div class="preview-panel">
-                    <h3>Servers (<span id="serverCount">0</span>)</h3>
-                    <div class="preview-content" id="serversPreview">
-                        <p class="placeholder">No servers loaded</p>
+                    <div class="form-group">
+                        <label>Concurrent:</label>
+                        <input type="number" id="concurrent" min="1" max="50" value="5" placeholder="Parallel connections">
                     </div>
-                </div>
-                <div class="preview-panel">
-                    <h3>Commands (<span id="commandCount">0</span>)</h3>
-                    <div class="preview-content" id="commandsPreview">
-                        <p class="placeholder">No commands loaded</p>
+
+                    <div class="form-group">
+                        <label>Servers File:</label>
+                        <div class="file-input">
+                            <input type="text" id="serversFile" readonly placeholder="Select servers CSV file...">
+                            <button onclick="selectServersFile()">Browse</button>
+                        </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Progress Section -->
-            <section class="progress-section" id="progressSection" style="display: none;">
-                <h2>Progress</h2>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-                <p class="progress-text" id="progressText">0 / 0</p>
-                <p class="current-server" id="currentServer"></p>
-            </section>
+                    <div class="form-group">
+                        <label>Commands File:</label>
+                        <div class="file-input">
+                            <input type="text" id="commandsFile" readonly placeholder="Select commands TXT file...">
+                            <button onclick="selectCommandsFile()">Browse</button>
+                        </div>
+                    </div>
 
-            <!-- Results Section -->
-            <section class="results-section" id="resultsSection" style="display: none;">
-                <h2>Results</h2>
-                <div class="summary" id="summary"></div>
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th>Hostname</th>
-                            <th>IP</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                    </tbody>
-                </table>
-            </section>
+                    <div class="button-group">
+                        <button id="runBtn" class="primary" onclick="startExecution()">Run</button>
+                        <button id="stopBtn" class="danger" onclick="stopExecution()" disabled>Stop</button>
+                    </div>
+                </section>
 
-            <!-- Log Viewer Section -->
+                <!-- Preview Section -->
+                <section class="preview-section">
+                    <div class="preview-panel">
+                        <h3>Servers (<span id="serverCount">0</span>)</h3>
+                        <div class="preview-content" id="serversPreview">
+                            <p class="placeholder">No servers loaded</p>
+                        </div>
+                    </div>
+                    <div class="preview-panel">
+                        <h3>Commands (<span id="commandCount">0</span>)</h3>
+                        <div class="preview-content" id="commandsPreview">
+                            <p class="placeholder">No commands loaded</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Progress Section -->
+                <section class="progress-section" id="progressSection" style="display: none;">
+                    <h2>Progress</h2>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">0 / 0</p>
+                    <p class="current-server" id="currentServer"></p>
+                </section>
+
+                <!-- Results Section -->
+                <section class="results-section" id="resultsSection" style="display: none;">
+                    <h2>Results</h2>
+                    <div class="summary" id="summary"></div>
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Hostname</th>
+                                <th>IP</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+
+            <!-- Live Logs Tab -->
+            <div class="tab-content" id="tab-live-logs">
+                <section class="live-logs-section">
+                    <div class="live-logs-header">
+                        <h2>Live Logs</h2>
+                        <div class="live-logs-controls">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="autoScroll" checked>
+                                Auto-scroll
+                            </label>
+                            <select id="serverFilter" onchange="filterLogs()">
+                                <option value="all">All Servers</option>
+                            </select>
+                            <button onclick="clearLiveLogs()">Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- View Toggle -->
+                    <div class="logs-view-toggle">
+                        <button class="active" data-view="combined" onclick="setLogsView('combined')">Combined</button>
+                        <button data-view="split" onclick="setLogsView('split')">Split View</button>
+                    </div>
+
+                    <!-- Combined View -->
+                    <div class="logs-combined-view" id="logsCombinedView">
+                        <pre class="live-log-content" id="combinedLogContent"></pre>
+                    </div>
+
+                    <!-- Split View -->
+                    <div class="logs-split-view" id="logsSplitView" style="display: none;">
+                    </div>
+                </section>
+            </div>
+
+            <!-- Log Viewer Modal -->
             <section class="log-section" id="logSection" style="display: none;">
                 <div class="log-header">
                     <h2>Log Viewer</h2>

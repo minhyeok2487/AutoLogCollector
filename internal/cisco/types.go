@@ -27,3 +27,6 @@ type ProgressCallback func(current, total int, server Server, status string)
 
 // ResultCallback is called when a server execution completes
 type ResultCallback func(result ExecutionResult)
+
+// LogCallback is called when there's new log output from a server
+type LogCallback func(serverIP string, hostname string, line string)

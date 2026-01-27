@@ -398,6 +398,225 @@ footer button:hover {
     background: #a8a8a8;
 }
 
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: #f1f3f4;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: #e8eaed;
+}
+
+.tab-btn.active {
+    background: #1a73e8;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Live Logs Section */
+.live-logs-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.live-logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8f0fe;
+}
+
+.live-logs-header h2 {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.live-logs-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+}
+
+.live-logs-controls select {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+.live-logs-controls button {
+    padding: 6px 16px;
+    font-size: 13px;
+}
+
+.logs-view-toggle {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.logs-view-toggle button {
+    padding: 6px 16px;
+    font-size: 12px;
+    background: #f1f3f4;
+    border: 1px solid #ddd;
+}
+
+.logs-view-toggle button.active {
+    background: #1a73e8;
+    color: white;
+    border-color: #1a73e8;
+}
+
+/* Combined View */
+.logs-combined-view {
+    background: #1e1e1e;
+    border-radius: 6px;
+    height: 500px;
+    overflow: hidden;
+}
+
+.live-log-content {
+    height: 100%;
+    padding: 15px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: #d4d4d4;
+    margin: 0;
+}
+
+.log-line {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.log-time {
+    color: #808080;
+}
+
+.log-server {
+    color: #569cd6;
+    font-weight: bold;
+}
+
+.log-text {
+    color: #dcdcaa;
+}
+
+/* Split View */
+.logs-split-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.server-log-panel {
+    background: #1e1e1e;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+}
+
+.server-log-panel .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #252526;
+    color: #cccccc;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.server-log-panel .panel-header button {
+    padding: 2px 8px;
+    font-size: 10px;
+    background: transparent;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+}
+
+.server-log-panel .panel-header button:hover {
+    color: #ff5555;
+}
+
+.server-log-panel .panel-content {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    color: #d4d4d4;
+    margin: 0;
+}
+
+/* Dark scrollbar for log panels */
+.live-log-content::-webkit-scrollbar,
+.server-log-panel .panel-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.live-log-content::-webkit-scrollbar-track,
+.server-log-panel .panel-content::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+.live-log-content::-webkit-scrollbar-thumb,
+.server-log-panel .panel-content::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.live-log-content::-webkit-scrollbar-thumb:hover,
+.server-log-panel .panel-content::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .preview-section {
@@ -406,5 +625,19 @@ footer button:hover {
 
     .container {
         padding: 10px;
+    }
+
+    .live-logs-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .live-logs-controls {
+        flex-wrap: wrap;
+    }
+
+    .logs-split-view {
+        grid-template-columns: 1fr;
     }
 }

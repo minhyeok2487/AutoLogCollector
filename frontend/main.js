@@ -24,11 +24,21 @@ const elements = {
     logSection: document.getElementById('logSection'),
     logTitle: document.getElementById('logTitle'),
     logContent: document.getElementById('logContent'),
-    statusText: document.getElementById('statusText')
+    statusText: document.getElementById('statusText'),
+    // Live Logs elements
+    autoScroll: document.getElementById('autoScroll'),
+    serverFilter: document.getElementById('serverFilter'),
+    combinedLogContent: document.getElementById('combinedLogContent'),
+    logsCombinedView: document.getElementById('logsCombinedView'),
+    logsSplitView: document.getElementById('logsSplitView')
 };
 
 // State
 let overlay = null;
+let liveLogs = [];           // All logs
+let serverLogs = {};         // Logs by server { 'ip': [{...}, ...] }
+let logsViewMode = 'combined'; // 'combined' or 'split'
+let knownServers = new Set(); // Track servers for filter dropdown
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -42,6 +52,217 @@ function setupEventListeners() {
         window.runtime.EventsOn('result', handleResult);
         window.runtime.EventsOn('completed', handleCompleted);
         window.runtime.EventsOn('error', handleError);
+        window.runtime.EventsOn('log', handleLog);
+    }
+}
+
+// Tab switching
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    });
+}
+
+// Live Logs handling
+function handleLog(data) {
+    const { serverIP, hostname, line } = data;
+    const timestamp = Date.now();
+
+    const logEntry = {
+        serverIP,
+        hostname,
+        line,
+        timestamp,
+        formattedTime: new Date(timestamp).toLocaleTimeString()
+    };
+
+    // Store log
+    liveLogs.push(logEntry);
+
+    // Store by server
+    if (!serverLogs[serverIP]) {
+        serverLogs[serverIP] = [];
+        addServerToFilter(serverIP, hostname);
+        if (logsViewMode === 'split') {
+            createServerLogPanel(serverIP, hostname);
+        }
+    }
+    serverLogs[serverIP].push(logEntry);
+
+    // Update UI
+    updateLogsUI(logEntry);
+
+    // Limit memory (keep last 10000 entries)
+    if (liveLogs.length > 10000) {
+        liveLogs.shift();
+    }
+}
+
+function updateLogsUI(logEntry) {
+    const currentFilter = elements.serverFilter?.value || 'all';
+
+    if (logsViewMode === 'combined') {
+        if (currentFilter === 'all' || currentFilter === logEntry.serverIP) {
+            appendToCombinedLog(logEntry);
+        }
+    } else {
+        appendToSplitLog(logEntry);
+    }
+}
+
+function appendToCombinedLog(logEntry) {
+    const logContent = elements.combinedLogContent;
+    if (!logContent) return;
+
+    const logLine = document.createElement('div');
+    logLine.className = 'log-line';
+    logLine.dataset.serverIp = logEntry.serverIP;
+    logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
+                        `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
+                        `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
+    logContent.appendChild(logLine);
+
+    // Auto-scroll
+    if (elements.autoScroll?.checked) {
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // Limit DOM nodes
+    while (logContent.children.length > 5000) {
+        logContent.removeChild(logContent.firstChild);
+    }
+}
+
+function appendToSplitLog(logEntry) {
+    const panelId = `log-panel-${logEntry.serverIP.replace(/\./g, '-')}`;
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const content = panel.querySelector('.panel-content');
+    if (!content) return;
+
+    const logLine = document.createElement('div');
+    logLine.className = 'log-line';
+    logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
+                        `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
+    content.appendChild(logLine);
+
+    // Auto-scroll
+    if (elements.autoScroll?.checked) {
+        content.scrollTop = content.scrollHeight;
+    }
+
+    // Limit DOM nodes
+    while (content.children.length > 2000) {
+        content.removeChild(content.firstChild);
+    }
+}
+
+function addServerToFilter(serverIP, hostname) {
+    if (knownServers.has(serverIP)) return;
+    knownServers.add(serverIP);
+
+    const option = document.createElement('option');
+    option.value = serverIP;
+    option.textContent = `${hostname} (${serverIP})`;
+    elements.serverFilter?.appendChild(option);
+}
+
+function createServerLogPanel(serverIP, hostname) {
+    const splitView = elements.logsSplitView;
+    if (!splitView) return;
+
+    const panelId = `log-panel-${serverIP.replace(/\./g, '-')}`;
+    if (document.getElementById(panelId)) return;
+
+    const panel = document.createElement('div');
+    panel.className = 'server-log-panel';
+    panel.id = panelId;
+    panel.innerHTML = `
+        <div class="panel-header">
+            <span>${escapeHtml(hostname)} (${escapeHtml(serverIP)})</span>
+            <button onclick="closeServerPanel('${escapeHtml(serverIP)}')">X</button>
+        </div>
+        <pre class="panel-content"></pre>
+    `;
+    splitView.appendChild(panel);
+
+    // Populate with existing logs
+    const logs = serverLogs[serverIP] || [];
+    const content = panel.querySelector('.panel-content');
+    logs.forEach(log => {
+        const logLine = document.createElement('div');
+        logLine.className = 'log-line';
+        logLine.innerHTML = `<span class="log-time">[${log.formattedTime}]</span> ` +
+                            `<span class="log-text">${escapeHtml(log.line)}</span>`;
+        content.appendChild(logLine);
+    });
+}
+
+function closeServerPanel(serverIP) {
+    const panelId = `log-panel-${serverIP.replace(/\./g, '-')}`;
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        panel.remove();
+    }
+}
+
+function setLogsView(mode) {
+    logsViewMode = mode;
+
+    // Update toggle buttons
+    document.querySelectorAll('.logs-view-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === mode);
+    });
+
+    if (mode === 'combined') {
+        elements.logsCombinedView.style.display = 'block';
+        elements.logsSplitView.style.display = 'none';
+    } else {
+        elements.logsCombinedView.style.display = 'none';
+        elements.logsSplitView.style.display = 'grid';
+
+        // Create panels for all known servers
+        knownServers.forEach(serverIP => {
+            const logs = serverLogs[serverIP];
+            if (logs && logs.length > 0) {
+                createServerLogPanel(serverIP, logs[0].hostname);
+            }
+        });
+    }
+}
+
+function filterLogs() {
+    const filter = elements.serverFilter?.value || 'all';
+    const logContent = elements.combinedLogContent;
+    if (!logContent) return;
+
+    // Show/hide log lines based on filter
+    Array.from(logContent.children).forEach(line => {
+        if (filter === 'all' || line.dataset.serverIp === filter) {
+            line.style.display = '';
+        } else {
+            line.style.display = 'none';
+        }
+    });
+}
+
+function clearLiveLogs() {
+    liveLogs = [];
+    serverLogs = {};
+    knownServers.clear();
+
+    if (elements.combinedLogContent) {
+        elements.combinedLogContent.innerHTML = '';
+    }
+    if (elements.logsSplitView) {
+        elements.logsSplitView.innerHTML = '';
+    }
+    if (elements.serverFilter) {
+        elements.serverFilter.innerHTML = '<option value="all">All Servers</option>';
     }
 }
 
@@ -125,6 +346,9 @@ async function startExecution() {
         showError('Please select a commands file');
         return;
     }
+
+    // Clear previous logs
+    clearLiveLogs();
 
     try {
         const success = await runtime.StartExecution(username, password, concurrent);
@@ -275,3 +499,8 @@ window.stopExecution = stopExecution;
 window.viewLog = viewLog;
 window.closeLogViewer = closeLogViewer;
 window.openLogsFolder = openLogsFolder;
+window.switchTab = switchTab;
+window.setLogsView = setLogsView;
+window.filterLogs = filterLogs;
+window.clearLiveLogs = clearLiveLogs;
+window.closeServerPanel = closeServerPanel;

@@ -141,6 +141,15 @@ func (a *App) StartExecution(username, password string, concurrent int) bool {
 		})
 	}
 
+	// Set log callback for real-time logging
+	a.runner.OnLog = func(serverIP, hostname, line string) {
+		runtime.EventsEmit(a.ctx, "log", map[string]interface{}{
+			"serverIP": serverIP,
+			"hostname": hostname,
+			"line":     line,
+		})
+	}
+
 	// Set result callback
 	a.runner.OnResult = func(result cisco.ExecutionResult) {
 		// Convert backslashes to forward slashes for JavaScript compatibility
