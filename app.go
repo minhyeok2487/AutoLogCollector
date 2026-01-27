@@ -96,7 +96,7 @@ func (a *App) PreviewCommands() []string {
 }
 
 // StartExecution begins the command execution
-func (a *App) StartExecution(username, password string) bool {
+func (a *App) StartExecution(username, password string, concurrent int) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -119,12 +119,16 @@ func (a *App) StartExecution(username, password string) bool {
 		return false
 	}
 
+	if concurrent <= 0 {
+		concurrent = 1
+	}
+
 	creds := &cisco.Credentials{
 		User:     username,
 		Password: password,
 	}
 
-	a.runner = cisco.NewRunner(a.servers, a.commands, creds)
+	a.runner = cisco.NewRunner(a.servers, a.commands, creds, concurrent)
 
 	// Set progress callback
 	a.runner.OnProgress = func(current, total int, server cisco.Server, status string) {

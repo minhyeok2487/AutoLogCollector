@@ -5,6 +5,7 @@ const runtime = window.go?.main?.App;
 const elements = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
+    concurrent: document.getElementById('concurrent'),
     serversFile: document.getElementById('serversFile'),
     commandsFile: document.getElementById('commandsFile'),
     runBtn: document.getElementById('runBtn'),
@@ -108,6 +109,7 @@ async function previewCommands() {
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
+    const concurrent = parseInt(elements.concurrent.value) || 5;
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -125,7 +127,7 @@ async function startExecution() {
     }
 
     try {
-        const success = await runtime.StartExecution(username, password);
+        const success = await runtime.StartExecution(username, password, concurrent);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -135,7 +137,7 @@ async function startExecution() {
             elements.progressText.textContent = '0 / 0';
             elements.currentServer.textContent = '';
             elements.summary.innerHTML = '';
-            setStatus('Running...');
+            setStatus(`Running (${concurrent} parallel)...`);
         }
     } catch (err) {
         showError('Failed to start: ' + err);
@@ -247,6 +249,7 @@ function setRunningState(running) {
     elements.stopBtn.disabled = !running;
     elements.username.disabled = running;
     elements.password.disabled = running;
+    elements.concurrent.disabled = running;
 }
 
 function setStatus(text) {

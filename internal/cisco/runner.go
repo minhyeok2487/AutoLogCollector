@@ -10,30 +10,36 @@ import (
 
 // Runner orchestrates command execution across multiple servers
 type Runner struct {
-	Servers      []Server
-	Commands     []string
-	Credentials  *Credentials
-	LogDir       string
-	OnProgress   ProgressCallback
-	OnResult     ResultCallback
-	ctx          context.Context
-	cancel       context.CancelFunc
-	mu           sync.Mutex
-	isRunning    bool
-	results      []ExecutionResult
-	successCount int
-	failCount    int
+	Servers       []Server
+	Commands      []string
+	Credentials   *Credentials
+	LogDir        string
+	MaxConcurrent int // Maximum number of concurrent executions
+	OnProgress    ProgressCallback
+	OnResult      ResultCallback
+	ctx           context.Context
+	cancel        context.CancelFunc
+	mu            sync.Mutex
+	isRunning     bool
+	results       []ExecutionResult
+	successCount  int
+	failCount     int
+	completedCount int
 }
 
 // NewRunner creates a new Runner instance
-func NewRunner(servers []Server, commands []string, creds *Credentials) *Runner {
+func NewRunner(servers []Server, commands []string, creds *Credentials, maxConcurrent int) *Runner {
 	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
+	if maxConcurrent <= 0 {
+		maxConcurrent = 1
+	}
 	return &Runner{
-		Servers:     servers,
-		Commands:    commands,
-		Credentials: creds,
-		LogDir:      logDir,
-		results:     make([]ExecutionResult, 0, len(servers)),
+		Servers:       servers,
+		Commands:      commands,
+		Credentials:   creds,
+		LogDir:        logDir,
+		MaxConcurrent: maxConcurrent,
+		results:       make([]ExecutionResult, 0, len(servers)),
 	}
 }
 
@@ -48,6 +54,7 @@ func (r *Runner) Start() error {
 	r.results = make([]ExecutionResult, 0, len(r.Servers))
 	r.successCount = 0
 	r.failCount = 0
+	r.completedCount = 0
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	r.mu.Unlock()
 
@@ -93,6 +100,12 @@ func (r *Runner) GetSummary() (success, fail, total int) {
 	return r.successCount, r.failCount, len(r.Servers)
 }
 
+// serverJob represents a job to process a server
+type serverJob struct {
+	index  int
+	server Server
+}
+
 func (r *Runner) run() {
 	defer func() {
 		r.mu.Lock()
@@ -100,15 +113,51 @@ func (r *Runner) run() {
 		r.mu.Unlock()
 	}()
 
+	// Create job channel
+	jobs := make(chan serverJob, len(r.Servers))
+
+	// Create wait group for workers
+	var wg sync.WaitGroup
+
+	// Start workers
+	for w := 0; w < r.MaxConcurrent; w++ {
+		wg.Add(1)
+		go r.worker(&wg, jobs)
+	}
+
+	// Send jobs
 	for i, server := range r.Servers {
+		select {
+		case <-r.ctx.Done():
+			close(jobs)
+			wg.Wait()
+			return
+		case jobs <- serverJob{index: i, server: server}:
+		}
+	}
+	close(jobs)
+
+	// Wait for all workers to complete
+	wg.Wait()
+}
+
+func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
+	defer wg.Done()
+
+	for job := range jobs {
 		select {
 		case <-r.ctx.Done():
 			return
 		default:
 		}
 
+		server := job.server
+
 		if r.OnProgress != nil {
-			r.OnProgress(i+1, len(r.Servers), server, "connecting")
+			r.mu.Lock()
+			completed := r.completedCount
+			r.mu.Unlock()
+			r.OnProgress(completed+1, len(r.Servers), server, "connecting")
 		}
 
 		startTime := time.Now()
@@ -124,6 +173,7 @@ func (r *Runner) run() {
 			result.Error = err.Error()
 			r.mu.Lock()
 			r.failCount++
+			r.completedCount++
 			r.mu.Unlock()
 		} else {
 			// Save log
@@ -133,6 +183,7 @@ func (r *Runner) run() {
 				result.Error = "Failed to save log: " + saveErr.Error()
 				r.mu.Lock()
 				r.failCount++
+				r.completedCount++
 				r.mu.Unlock()
 			} else {
 				result.Success = true
@@ -140,12 +191,14 @@ func (r *Runner) run() {
 				result.LogPath = logPath
 				r.mu.Lock()
 				r.successCount++
+				r.completedCount++
 				r.mu.Unlock()
 			}
 		}
 
 		r.mu.Lock()
 		r.results = append(r.results, result)
+		completed := r.completedCount
 		r.mu.Unlock()
 
 		if r.OnResult != nil {
@@ -157,7 +210,7 @@ func (r *Runner) run() {
 			if !result.Success {
 				status = "failed"
 			}
-			r.OnProgress(i+1, len(r.Servers), server, status)
+			r.OnProgress(completed, len(r.Servers), server, status)
 		}
 	}
 }

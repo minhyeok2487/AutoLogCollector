@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,7 +9,12 @@ import (
 )
 
 func main() {
+	// Parse command line arguments
+	concurrent := flag.Int("c", 5, "Number of concurrent connections")
+	flag.Parse()
+
 	fmt.Println("=== Cisco Device Automation Tool ===")
+	fmt.Printf("Concurrent connections: %d\n", *concurrent)
 	fmt.Println()
 
 	// Load credentials
@@ -36,8 +42,8 @@ func main() {
 	fmt.Printf("[OK] Loaded %d commands\n", len(commands))
 	fmt.Println()
 
-	// Create runner
-	runner := cisco.NewRunner(servers, commands, creds)
+	// Create runner with concurrent connections
+	runner := cisco.NewRunner(servers, commands, creds, *concurrent)
 
 	// Set progress callback
 	runner.OnProgress = func(current, total int, server cisco.Server, status string) {
