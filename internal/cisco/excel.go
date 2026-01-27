@@ -177,10 +177,11 @@ func splitOutputByCommands(output string, commands []string) []CommandBlock {
 	for _, line := range lines {
 		cleanLine := strings.TrimRight(line, "\r")
 
-		// Check if this line contains a command
+		// Check if this line is a command prompt line (e.g., "Router#show run")
+		// Command line must have prompt character (#, >) followed by the command
 		matchedCmd := ""
 		for _, cmd := range commands {
-			if strings.Contains(cleanLine, cmd) {
+			if isCommandLine(cleanLine, cmd) {
 				matchedCmd = cmd
 				break
 			}
@@ -207,6 +208,29 @@ func splitOutputByCommands(output string, commands []string) []CommandBlock {
 	}
 
 	return blocks
+}
+
+// isCommandLine checks if the line is a command prompt line
+// Cisco prompts look like: "hostname#command" or "hostname>command"
+func isCommandLine(line, command string) bool {
+	// Find prompt character position
+	hashPos := strings.LastIndex(line, "#")
+	gtPos := strings.LastIndex(line, ">")
+
+	promptPos := hashPos
+	if gtPos > promptPos {
+		promptPos = gtPos
+	}
+
+	if promptPos == -1 {
+		return false
+	}
+
+	// Check if command appears right after the prompt character
+	afterPrompt := line[promptPos+1:]
+	afterPrompt = strings.TrimLeft(afterPrompt, " ") // Remove leading spaces
+
+	return strings.HasPrefix(afterPrompt, command)
 }
 
 // sanitizeSheetName creates a valid Excel sheet name from a command
