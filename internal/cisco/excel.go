@@ -7,17 +7,19 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+// CommandBlock represents a command and its output
+type CommandBlock struct {
+	Command string
+	Lines   []string // Including the command line itself
+}
+
 // ExportToExcel exports execution results to an Excel file
-// Format: Columns = Hostnames, Rows = Output lines
-// Commands are highlighted with yellow background, bold text, and preceded by empty row
+// Format: One sheet per command, Columns = Hostnames, Rows = Output lines
 func ExportToExcel(results []ExecutionResult, commands []string, outputPath string) error {
 	f := excelize.NewFile()
 	defer f.Close()
 
-	sheetName := "Results"
-	f.SetSheetName("Sheet1", sheetName)
-
-	// Set header style
+	// Define styles
 	headerStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true, Color: "FFFFFF"},
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"1a73e8"}, Pattern: 1},
@@ -30,7 +32,6 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Set cell style
 	cellStyle, _ := f.NewStyle(&excelize.Style{
 		Alignment: &excelize.Alignment{Vertical: "center"},
 		Border: []excelize.Border{
@@ -41,7 +42,6 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Set line number style
 	lineNumStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Color: "888888"},
 		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
@@ -54,7 +54,6 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Command highlight style - yellow background + bold
 	cmdStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true},
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"FFF9C4"}, Pattern: 1},
@@ -67,7 +66,6 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Command line number style
 	cmdLineNumStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true, Color: "888888"},
 		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
@@ -80,138 +78,160 @@ func ExportToExcel(results []ExecutionResult, commands []string, outputPath stri
 		},
 	})
 
-	// Write header row: empty + hostnames
-	f.SetCellValue(sheetName, "A1", "Line")
-	f.SetCellStyle(sheetName, "A1", "A1", headerStyle)
-
+	// Parse outputs by command for each server
+	serverCommandBlocks := make([][]CommandBlock, len(results))
 	for i, result := range results {
-		col := getColumnName(i + 2) // B, C, D, ...
-		f.SetCellValue(sheetName, col+"1", result.Server.Hostname)
-		f.SetCellStyle(sheetName, col+"1", col+"1", headerStyle)
+		serverCommandBlocks[i] = splitOutputByCommands(result.Output, commands)
 	}
 
-	// Parse outputs into lines and mark command lines
-	allOutputLines := make([][]string, len(results))
-	allIsCommand := make([][]bool, len(results))
-	maxLines := 0
+	// Create a sheet for each command
+	for cmdIdx, cmd := range commands {
+		sheetName := sanitizeSheetName(cmd, cmdIdx+1)
 
-	for i, result := range results {
-		lines := strings.Split(result.Output, "\n")
-		cleanLines := make([]string, 0, len(lines))
-		isCommand := make([]bool, 0, len(lines))
-
-		for _, line := range lines {
-			cleanLine := strings.TrimRight(line, "\r")
-			cleanLines = append(cleanLines, cleanLine)
-			isCommand = append(isCommand, containsCommand(cleanLine, commands))
+		// Create sheet (first one replaces Sheet1)
+		if cmdIdx == 0 {
+			f.SetSheetName("Sheet1", sheetName)
+		} else {
+			f.NewSheet(sheetName)
 		}
 
-		allOutputLines[i] = cleanLines
-		allIsCommand[i] = isCommand
+		// Write header row
+		f.SetCellValue(sheetName, "A1", "Line")
+		f.SetCellStyle(sheetName, "A1", "A1", headerStyle)
 
-		if len(cleanLines) > maxLines {
-			maxLines = len(cleanLines)
+		for i, result := range results {
+			col := getColumnName(i + 2)
+			f.SetCellValue(sheetName, col+"1", result.Server.Hostname)
+			f.SetCellStyle(sheetName, col+"1", col+"1", headerStyle)
 		}
-	}
 
-	// Build rows with empty rows before commands
-	type rowData struct {
-		lineNum   int
-		isCommand bool
-		isEmpty   bool
-	}
+		// Get command blocks for this command from each server
+		commandOutputs := make([][]string, len(results))
+		maxLines := 0
 
-	rows := make([]rowData, 0)
-	for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
-		// Check if any server has a command on this line
-		anyCommand := false
 		for serverIdx := range results {
-			if lineIdx < len(allIsCommand[serverIdx]) && allIsCommand[serverIdx][lineIdx] {
-				anyCommand = true
-				break
+			blocks := serverCommandBlocks[serverIdx]
+			for _, block := range blocks {
+				if block.Command == cmd {
+					commandOutputs[serverIdx] = block.Lines
+					if len(block.Lines) > maxLines {
+						maxLines = len(block.Lines)
+					}
+					break
+				}
 			}
 		}
 
-		// Add empty row before command (except for first line)
-		if anyCommand && lineIdx > 0 {
-			rows = append(rows, rowData{lineNum: -1, isCommand: false, isEmpty: true})
-		}
+		// Write data rows
+		for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
+			excelRow := lineIdx + 2
 
-		rows = append(rows, rowData{lineNum: lineIdx, isCommand: anyCommand, isEmpty: false})
-	}
+			// Line number
+			f.SetCellValue(sheetName, fmt.Sprintf("A%d", excelRow), lineIdx+1)
 
-	// Write data rows
-	for rowIdx, row := range rows {
-		excelRow := rowIdx + 2 // Start from row 2
+			// First line (command line) gets special style
+			if lineIdx == 0 {
+				f.SetCellStyle(sheetName, fmt.Sprintf("A%d", excelRow), fmt.Sprintf("A%d", excelRow), cmdLineNumStyle)
+			} else {
+				f.SetCellStyle(sheetName, fmt.Sprintf("A%d", excelRow), fmt.Sprintf("A%d", excelRow), lineNumStyle)
+			}
 
-		if row.isEmpty {
-			// Empty row
-			f.SetCellValue(sheetName, fmt.Sprintf("A%d", excelRow), "")
-			f.SetCellStyle(sheetName, fmt.Sprintf("A%d", excelRow), fmt.Sprintf("A%d", excelRow), lineNumStyle)
+			// Each server's line
 			for serverIdx := range results {
 				col := getColumnName(serverIdx + 2)
 				cell := fmt.Sprintf("%s%d", col, excelRow)
-				f.SetCellValue(sheetName, cell, "")
-				f.SetCellStyle(sheetName, cell, cell, cellStyle)
-			}
-			continue
-		}
 
-		lineIdx := row.lineNum
+				if lineIdx < len(commandOutputs[serverIdx]) {
+					f.SetCellValue(sheetName, cell, commandOutputs[serverIdx][lineIdx])
+				} else {
+					f.SetCellValue(sheetName, cell, "")
+				}
 
-		// Line number
-		f.SetCellValue(sheetName, fmt.Sprintf("A%d", excelRow), lineIdx+1)
-		if row.isCommand {
-			f.SetCellStyle(sheetName, fmt.Sprintf("A%d", excelRow), fmt.Sprintf("A%d", excelRow), cmdLineNumStyle)
-		} else {
-			f.SetCellStyle(sheetName, fmt.Sprintf("A%d", excelRow), fmt.Sprintf("A%d", excelRow), lineNumStyle)
-		}
-
-		// Each server's line
-		for serverIdx := range results {
-			col := getColumnName(serverIdx + 2)
-			cell := fmt.Sprintf("%s%d", col, excelRow)
-
-			if lineIdx < len(allOutputLines[serverIdx]) {
-				f.SetCellValue(sheetName, cell, allOutputLines[serverIdx][lineIdx])
-			} else {
-				f.SetCellValue(sheetName, cell, "")
-			}
-
-			// Apply command style if this line contains a command
-			if row.isCommand {
-				f.SetCellStyle(sheetName, cell, cell, cmdStyle)
-			} else {
-				f.SetCellStyle(sheetName, cell, cell, cellStyle)
+				// First line gets command style
+				if lineIdx == 0 {
+					f.SetCellStyle(sheetName, cell, cell, cmdStyle)
+				} else {
+					f.SetCellStyle(sheetName, cell, cell, cellStyle)
+				}
 			}
 		}
-	}
 
-	// Set column widths
-	f.SetColWidth(sheetName, "A", "A", 8)
-	for i := range results {
-		col := getColumnName(i + 2)
-		f.SetColWidth(sheetName, col, col, 60)
+		// Set column widths
+		f.SetColWidth(sheetName, "A", "A", 8)
+		for i := range results {
+			col := getColumnName(i + 2)
+			f.SetColWidth(sheetName, col, col, 60)
+		}
 	}
 
 	return f.SaveAs(outputPath)
 }
 
-// containsCommand checks if a line contains any of the commands
-func containsCommand(line string, commands []string) bool {
-	for _, cmd := range commands {
-		if strings.Contains(line, cmd) {
-			return true
+// splitOutputByCommands parses output and splits it by command blocks
+func splitOutputByCommands(output string, commands []string) []CommandBlock {
+	lines := strings.Split(output, "\n")
+	blocks := make([]CommandBlock, 0)
+
+	var currentBlock *CommandBlock
+
+	for _, line := range lines {
+		cleanLine := strings.TrimRight(line, "\r")
+
+		// Check if this line contains a command
+		matchedCmd := ""
+		for _, cmd := range commands {
+			if strings.Contains(cleanLine, cmd) {
+				matchedCmd = cmd
+				break
+			}
+		}
+
+		if matchedCmd != "" {
+			// Start a new block
+			if currentBlock != nil {
+				blocks = append(blocks, *currentBlock)
+			}
+			currentBlock = &CommandBlock{
+				Command: matchedCmd,
+				Lines:   []string{cleanLine},
+			}
+		} else if currentBlock != nil {
+			// Add to current block
+			currentBlock.Lines = append(currentBlock.Lines, cleanLine)
 		}
 	}
-	return false
+
+	// Don't forget the last block
+	if currentBlock != nil {
+		blocks = append(blocks, *currentBlock)
+	}
+
+	return blocks
+}
+
+// sanitizeSheetName creates a valid Excel sheet name from a command
+func sanitizeSheetName(cmd string, index int) string {
+	// Remove invalid characters for Excel sheet names
+	invalid := []string{":", "\\", "/", "?", "*", "[", "]"}
+	name := cmd
+	for _, char := range invalid {
+		name = strings.ReplaceAll(name, char, "_")
+	}
+
+	// Excel sheet name max length is 31 characters
+	if len(name) > 28 {
+		name = name[:28]
+	}
+
+	// Add index prefix to ensure uniqueness
+	return fmt.Sprintf("%d_%s", index, name)
 }
 
 // getColumnName converts column index (1-based) to Excel column name
 func getColumnName(n int) string {
 	result := ""
 	for n > 0 {
-		n-- // Make it 0-based
+		n--
 		result = string(rune('A'+n%26)) + result
 		n /= 26
 	}
