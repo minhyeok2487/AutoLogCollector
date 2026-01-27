@@ -144,13 +144,27 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string) (stri
 	passwordOutput := readOutput(1 * time.Second)
 	output.WriteString(passwordOutput)
 
+	// Disable paging to get full output
+	sendCommand("terminal length 0")
+	time.Sleep(300 * time.Millisecond)
+	readOutput(1 * time.Second) // Discard output
+
 	// Execute commands
 	for _, cmd := range commands {
 		sendCommand(cmd)
 		time.Sleep(300 * time.Millisecond)
-		cmdOutput := readOutput(3 * time.Second)
+		cmdOutput := readOutput(30 * time.Second) // Longer timeout for commands like 'show run'
 		output.WriteString(cmdOutput)
 	}
+
+	// Restore terminal length to default
+	sendCommand("terminal length 24")
+	time.Sleep(300 * time.Millisecond)
+	readOutput(1 * time.Second)
+
+	// Exit gracefully
+	sendCommand("exit")
+	time.Sleep(200 * time.Millisecond)
 
 	return output.String(), nil
 }
@@ -317,13 +331,27 @@ func ExecuteCommandsWithLog(server Server, creds *Credentials, commands []string
 	passwordOutput := readOutput(1 * time.Second)
 	output.WriteString(passwordOutput)
 
+	// Disable paging to get full output
+	sendCommand("terminal length 0")
+	time.Sleep(300 * time.Millisecond)
+	readOutput(1 * time.Second) // Discard output
+
 	// Execute commands
 	for _, cmd := range commands {
 		sendCommand(cmd)
 		time.Sleep(300 * time.Millisecond)
-		cmdOutput := readOutput(3 * time.Second)
+		cmdOutput := readOutput(30 * time.Second) // Longer timeout for commands like 'show run'
 		output.WriteString(cmdOutput)
 	}
+
+	// Restore terminal length to default
+	sendCommand("terminal length 24")
+	time.Sleep(300 * time.Millisecond)
+	readOutput(1 * time.Second)
+
+	// Exit gracefully
+	sendCommand("exit")
+	time.Sleep(200 * time.Millisecond)
 
 	return output.String(), nil
 }
