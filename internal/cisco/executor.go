@@ -152,7 +152,7 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, chunk
 	// Chunk timeout duration (user configurable)
 	chunkTimeout := time.Duration(chunkTimeoutSec) * time.Second
 
-	// Helper to read with timeout and prompt detection
+	// Helper to read with timeout, prompt detection, and --More-- handling
 	readOutput := func(timeout time.Duration, detectPrompt bool) string {
 		var result strings.Builder
 		timer := time.NewTimer(timeout)
@@ -162,6 +162,13 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, chunk
 			select {
 			case data := <-outputChan:
 				result.WriteString(data)
+
+				// Check for --More-- prompt and send space to continue
+				if strings.Contains(data, "--More--") || strings.Contains(data, " --More-- ") {
+					fmt.Fprint(stdin, " ") // Send space without newline to continue
+					timer.Reset(chunkTimeout)
+					continue
+				}
 
 				// Check for prompt if detection is enabled
 				if detectPrompt {
