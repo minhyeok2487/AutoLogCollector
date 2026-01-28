@@ -18,7 +18,12 @@ type ScheduledTask struct {
 	DaysOfWeek   []int  `json:"daysOfWeek"`   // 0-6 (Sunday-Saturday) for weekly
 	DayOfMonth   int    `json:"dayOfMonth"`   // 1-31 for monthly
 
-	// Execution configuration (no passwords stored)
+	// Credentials
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	EnablePassword string `json:"enablePassword,omitempty"`
+
+	// Execution configuration
 	Servers       []cisco.Server `json:"servers"`
 	Commands      []string       `json:"commands"`
 	Timeout       int            `json:"timeout"`

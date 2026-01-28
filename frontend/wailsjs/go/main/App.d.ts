@@ -4,8 +4,6 @@ import {updater} from '../models';
 
 export function CheckForUpdates():Promise<updater.UpdateInfo>;
 
-export function ClearCredentials():Promise<void>;
-
 export function CreateSchedule(arg1:Record<string, any>):Promise<string>;
 
 export function DeleteSchedule(arg1:string):Promise<boolean>;
@@ -22,8 +20,6 @@ export function GetLogFiles():Promise<Array<Record<string, string>>>;
 
 export function GetSchedules():Promise<Array<Record<string, any>>>;
 
-export function HasCredentials():Promise<boolean>;
-
 export function ImportServersFromCSV():Promise<Array<Record<string, string>>>;
 
 export function IsRunning():Promise<boolean>;
@@ -37,8 +33,6 @@ export function RestartApp():Promise<void>;
 export function RunScheduleNow(arg1:string):Promise<boolean>;
 
 export function SetCommands(arg1:Array<string>):Promise<void>;
-
-export function SetCredentials(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetServers(arg1:Array<Record<string, string>>):Promise<void>;
 

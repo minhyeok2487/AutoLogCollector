@@ -26,14 +26,13 @@ const (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	runner      *cisco.Runner
-	updater     *updater.Updater
-	scheduler   *scheduler.Scheduler
-	mu          sync.Mutex
-	servers     []cisco.Server
-	commands    []string
-	credentials *cisco.Credentials // Session credentials for scheduled tasks
+	ctx       context.Context
+	runner    *cisco.Runner
+	updater   *updater.Updater
+	scheduler *scheduler.Scheduler
+	mu        sync.Mutex
+	servers   []cisco.Server
+	commands  []string
 }
 
 // NewApp creates a new App application struct
@@ -66,15 +65,11 @@ func (a *App) shutdown(ctx context.Context) {
 
 // executeScheduledTask is called when a scheduled task triggers
 func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
-	a.mu.Lock()
-	creds := a.credentials
-	a.mu.Unlock()
-
-	if creds == nil || creds.User == "" || creds.Password == "" {
+	if task.Username == "" || task.Password == "" {
 		runtime.EventsEmit(a.ctx, "scheduleSkipped", map[string]interface{}{
 			"taskId":   task.ID,
 			"taskName": task.Name,
-			"reason":   "No credentials set. Please enter username and password.",
+			"reason":   "No credentials configured in schedule.",
 		})
 		return
 	}
@@ -101,8 +96,8 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 	a.commands = task.Commands
 	a.mu.Unlock()
 
-	// Start execution
-	a.StartExecution(creds.User, creds.Password, task.Timeout, task.EnableMode, task.DisablePaging, creds.EnablePassword)
+	// Start execution with task's credentials
+	a.StartExecution(task.Username, task.Password, task.Timeout, task.EnableMode, task.DisablePaging, task.EnablePassword)
 }
 
 // SetServers sets the server list from GUI input
@@ -416,32 +411,6 @@ func (a *App) ExportResults() string {
 
 // ==================== Schedule Management ====================
 
-// SetCredentials stores session credentials for scheduled tasks
-func (a *App) SetCredentials(username, password, enablePassword string) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.credentials = &cisco.Credentials{
-		User:           username,
-		Password:       password,
-		EnablePassword: enablePassword,
-	}
-}
-
-// ClearCredentials clears stored credentials
-func (a *App) ClearCredentials() {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.credentials = nil
-}
-
-// HasCredentials returns whether credentials are set
-func (a *App) HasCredentials() bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.credentials != nil && a.credentials.User != "" && a.credentials.Password != ""
-}
-
 // CreateSchedule creates a new scheduled task
 func (a *App) CreateSchedule(taskData map[string]interface{}) string {
 	task := a.mapToScheduledTask(taskData)
@@ -566,6 +535,17 @@ func (a *App) mapToScheduledTask(data map[string]interface{}) *scheduler.Schedul
 		task.DisablePaging = disablePaging
 	}
 
+	// Parse credentials
+	if username, ok := data["username"].(string); ok {
+		task.Username = username
+	}
+	if password, ok := data["password"].(string); ok {
+		task.Password = password
+	}
+	if enablePassword, ok := data["enablePassword"].(string); ok {
+		task.EnablePassword = enablePassword
+	}
+
 	// Parse servers
 	if servers, ok := data["servers"].([]interface{}); ok {
 		task.Servers = make([]cisco.Server, 0, len(servers))
@@ -612,18 +592,21 @@ func (a *App) scheduledTaskToMap(task *scheduler.ScheduledTask) map[string]inter
 	}
 
 	result := map[string]interface{}{
-		"id":            task.ID,
-		"name":          task.Name,
-		"enabled":       task.Enabled,
-		"scheduleType":  task.ScheduleType,
-		"time":          task.Time,
-		"daysOfWeek":    task.DaysOfWeek,
-		"dayOfMonth":    task.DayOfMonth,
-		"servers":       servers,
-		"commands":      task.Commands,
-		"timeout":       task.Timeout,
-		"enableMode":    task.EnableMode,
-		"disablePaging": task.DisablePaging,
+		"id":             task.ID,
+		"name":           task.Name,
+		"enabled":        task.Enabled,
+		"scheduleType":   task.ScheduleType,
+		"time":           task.Time,
+		"daysOfWeek":     task.DaysOfWeek,
+		"dayOfMonth":     task.DayOfMonth,
+		"username":       task.Username,
+		"password":       task.Password,
+		"enablePassword": task.EnablePassword,
+		"servers":        servers,
+		"commands":       task.Commands,
+		"timeout":        task.Timeout,
+		"enableMode":     task.EnableMode,
+		"disablePaging":  task.DisablePaging,
 	}
 
 	if task.LastRun != nil {

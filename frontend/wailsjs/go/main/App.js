@@ -6,10 +6,6 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
-export function ClearCredentials() {
-  return window['go']['main']['App']['ClearCredentials']();
-}
-
 export function CreateSchedule(arg1) {
   return window['go']['main']['App']['CreateSchedule'](arg1);
 }
@@ -42,10 +38,6 @@ export function GetSchedules() {
   return window['go']['main']['App']['GetSchedules']();
 }
 
-export function HasCredentials() {
-  return window['go']['main']['App']['HasCredentials']();
-}
-
 export function ImportServersFromCSV() {
   return window['go']['main']['App']['ImportServersFromCSV']();
 }
@@ -72,10 +64,6 @@ export function RunScheduleNow(arg1) {
 
 export function SetCommands(arg1) {
   return window['go']['main']['App']['SetCommands'](arg1);
-}
-
-export function SetCredentials(arg1, arg2, arg3) {
-  return window['go']['main']['App']['SetCredentials'](arg1, arg2, arg3);
 }
 
 export function SetServers(arg1) {

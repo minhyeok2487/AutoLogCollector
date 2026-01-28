@@ -114,7 +114,6 @@ function showSection(section) {
     // Load schedules when switching to schedule section
     if (section === 'schedule') {
         loadSchedules();
-        updateCredentialStatus();
     }
 }
 
@@ -679,72 +678,6 @@ window.toggleEnablePasswordInput = toggleEnablePasswordInput;
 
 let schedules = [];
 
-// Sync credentials from Schedule section
-function syncScheduleCredentials() {
-    const username = document.getElementById('scheduleUsername')?.value?.trim() || '';
-    const password = document.getElementById('schedulePassword')?.value || '';
-    const enablePwd = document.getElementById('scheduleEnablePassword')?.value || '';
-
-    if (username && password) {
-        runtime.SetCredentials(username, password, enablePwd);
-    }
-    updateCredentialStatus();
-}
-
-// Update credentials when user types in Execution section
-function setupCredentialSync() {
-    const usernameInput = elements.username;
-    const passwordInput = elements.password;
-    const enablePasswordInput = elements.enablePassword;
-
-    const syncCredentials = () => {
-        const username = usernameInput?.value?.trim() || '';
-        const password = passwordInput?.value || '';
-        const enablePwd = elements.enableMode?.checked ?
-            (elements.samePassword?.checked ? password : (enablePasswordInput?.value || '')) : '';
-
-        if (username && password) {
-            runtime.SetCredentials(username, password, enablePwd);
-            // Also update Schedule section fields
-            const scheduleUser = document.getElementById('scheduleUsername');
-            const schedulePass = document.getElementById('schedulePassword');
-            const scheduleEnablePwd = document.getElementById('scheduleEnablePassword');
-            if (scheduleUser) scheduleUser.value = username;
-            if (schedulePass) schedulePass.value = password;
-            if (scheduleEnablePwd) scheduleEnablePwd.value = enablePwd;
-        }
-        updateCredentialStatus();
-    };
-
-    usernameInput?.addEventListener('change', syncCredentials);
-    passwordInput?.addEventListener('change', syncCredentials);
-    enablePasswordInput?.addEventListener('change', syncCredentials);
-}
-
-// Initialize credential sync on load
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(setupCredentialSync, 100);
-});
-
-async function updateCredentialStatus() {
-    try {
-        const hasCredentials = await runtime.HasCredentials();
-        const statusEl = document.getElementById('credentialStatus');
-        if (statusEl) {
-            const indicator = statusEl.querySelector('.status-indicator');
-            if (hasCredentials) {
-                indicator.classList.add('active');
-                statusEl.innerHTML = `<span class="status-indicator active"></span> Credentials set`;
-            } else {
-                indicator.classList.remove('active');
-                statusEl.innerHTML = `<span class="status-indicator"></span> No credentials`;
-            }
-        }
-    } catch (err) {
-        console.error('Failed to check credentials:', err);
-    }
-}
-
 async function loadSchedules() {
     try {
         schedules = await runtime.GetSchedules() || [];
@@ -821,6 +754,9 @@ function showScheduleForm(scheduleId = null) {
     // Reset form
     document.getElementById('scheduleId').value = '';
     document.getElementById('scheduleName').value = '';
+    document.getElementById('scheduleFormUsername').value = '';
+    document.getElementById('scheduleFormPassword').value = '';
+    document.getElementById('scheduleFormEnablePassword').value = '';
     document.querySelector('input[name="scheduleType"][value="daily"]').checked = true;
     document.getElementById('scheduleTime').value = '09:00';
     document.getElementById('scheduleTimeout').value = '1';
@@ -853,6 +789,9 @@ function showScheduleForm(scheduleId = null) {
 function populateScheduleForm(schedule) {
     document.getElementById('scheduleId').value = schedule.id;
     document.getElementById('scheduleName').value = schedule.name;
+    document.getElementById('scheduleFormUsername').value = schedule.username || '';
+    document.getElementById('scheduleFormPassword').value = schedule.password || '';
+    document.getElementById('scheduleFormEnablePassword').value = schedule.enablePassword || '';
     document.querySelector(`input[name="scheduleType"][value="${schedule.scheduleType}"]`).checked = true;
     document.getElementById('scheduleTime').value = schedule.time;
     document.getElementById('scheduleTimeout').value = schedule.timeout || 1;
@@ -921,6 +860,9 @@ function copyCommandsFromExecution() {
 function getScheduleFormData() {
     const id = document.getElementById('scheduleId').value;
     const name = document.getElementById('scheduleName').value.trim();
+    const username = document.getElementById('scheduleFormUsername').value.trim();
+    const password = document.getElementById('scheduleFormPassword').value;
+    const enablePassword = document.getElementById('scheduleFormEnablePassword').value;
     const scheduleType = document.querySelector('input[name="scheduleType"]:checked')?.value;
     const time = document.getElementById('scheduleTime').value;
     const timeout = parseInt(document.getElementById('scheduleTimeout').value) || 1;
@@ -955,6 +897,9 @@ function getScheduleFormData() {
     return {
         id,
         name,
+        username,
+        password,
+        enablePassword,
         scheduleType,
         time,
         daysOfWeek,
@@ -973,6 +918,10 @@ async function saveSchedule() {
 
     if (!data.name) {
         alert('Please enter a schedule name');
+        return;
+    }
+    if (!data.username || !data.password) {
+        alert('Please enter username and password');
         return;
     }
     if (data.servers.length === 0) {
@@ -1070,4 +1019,3 @@ window.editSchedule = editSchedule;
 window.deleteSchedule = deleteSchedule;
 window.toggleSchedule = toggleSchedule;
 window.runScheduleNow = runScheduleNow;
-window.syncScheduleCredentials = syncScheduleCredentials;

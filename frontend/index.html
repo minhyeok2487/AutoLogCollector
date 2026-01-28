@@ -230,34 +230,6 @@ show run"></textarea>
 
                 <!-- Schedule Section -->
                 <section class="content-section" id="scheduleSection" style="display: none;">
-                    <!-- Credentials Panel for Schedule -->
-                    <div class="panel">
-                        <div class="panel-header">
-                            <h2>Session Credentials</h2>
-                            <span class="credential-status" id="credentialStatus">
-                                <span class="status-indicator"></span>
-                                No credentials
-                            </span>
-                        </div>
-                        <div class="panel-body">
-                            <p class="info-text">Enter credentials to enable scheduled task execution. These are stored in memory only.</p>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Username</label>
-                                    <input type="text" id="scheduleUsername" placeholder="SSH username" onchange="syncScheduleCredentials()">
-                                </div>
-                                <div class="form-group">
-                                    <label>Password</label>
-                                    <input type="password" id="schedulePassword" placeholder="SSH password" onchange="syncScheduleCredentials()">
-                                </div>
-                                <div class="form-group">
-                                    <label>Enable Password</label>
-                                    <input type="password" id="scheduleEnablePassword" placeholder="Optional" onchange="syncScheduleCredentials()">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="panel">
                         <div class="panel-header">
                             <h2>Scheduled Tasks</h2>
@@ -356,6 +328,24 @@ show run"></textarea>
                         <div class="form-group">
                             <label>Schedule Name</label>
                             <input type="text" id="scheduleName" placeholder="e.g., Daily Backup Check">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Credentials</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="scheduleFormUsername" placeholder="SSH username">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="scheduleFormPassword" placeholder="SSH password">
+                            </div>
+                            <div class="form-group">
+                                <label>Enable Password</label>
+                                <input type="password" id="scheduleFormEnablePassword" placeholder="Optional">
+                            </div>
                         </div>
                     </div>
 
