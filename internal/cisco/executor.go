@@ -48,7 +48,7 @@ func newSSHConfig(creds *Credentials) *ssh.ClientConfig {
 }
 
 // ExecuteCommands connects to server and executes commands with real-time log callback
-func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog func(line string)) (string, error) {
+func ExecuteCommands(server Server, creds *Credentials, commands []string, chunkTimeoutSec int, onLog func(line string)) (string, error) {
 	config := newSSHConfig(creds)
 
 	// Connect to SSH
@@ -149,6 +149,9 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 		return promptPattern.MatchString(line)
 	}
 
+	// Chunk timeout duration (user configurable)
+	chunkTimeout := time.Duration(chunkTimeoutSec) * time.Second
+
 	// Helper to read with timeout and prompt detection
 	readOutput := func(timeout time.Duration, detectPrompt bool) string {
 		var result strings.Builder
@@ -178,8 +181,8 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 					}
 				}
 
-				// Reset timer - wait for more data
-				timer.Reset(5 * time.Second)
+				// Reset timer - wait for more data (use configurable chunk timeout)
+				timer.Reset(chunkTimeout)
 			case <-timer.C:
 				return result.String()
 			case <-doneChan:
@@ -214,23 +217,27 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 	time.Sleep(300 * time.Millisecond)
 	readOutput(2*time.Second, false)
 
-	// Execute commands with prompt detection
+	// Execute commands - wait for timeout (prompt detection disabled for reliability)
 	for _, cmd := range commands {
 		sendCommand(cmd)
 		time.Sleep(300 * time.Millisecond)
-		// Use prompt detection - will return when prompt is seen, or timeout after 2 min
-		cmdOutput := readOutput(120*time.Second, true)
+		cmdOutput := readOutput(120*time.Second, false)
 		output.WriteString(cmdOutput)
 	}
 
 	// Restore terminal length to default
 	sendCommand("terminal length 24")
 	time.Sleep(300 * time.Millisecond)
-	readOutput(2*time.Second, false)
+	termOutput := readOutput(2*time.Second, false)
+	output.WriteString(termOutput)
 
 	// Exit gracefully
 	sendCommand("exit")
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
+
+	// Drain any remaining output
+	drainOutput := readOutput(2*time.Second, false)
+	output.WriteString(drainOutput)
 
 	return output.String(), nil
 }

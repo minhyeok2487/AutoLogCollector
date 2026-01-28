@@ -14,7 +14,8 @@ type Runner struct {
 	Commands       []string
 	Credentials    *Credentials
 	LogDir         string
-	MaxConcurrent  int // Maximum number of concurrent executions
+	MaxConcurrent  int // Maximum number of concurrent executions (always 1)
+	ChunkTimeout   int // Seconds to wait for data chunks
 	OnProgress     ProgressCallback
 	OnResult       ResultCallback
 	OnLog          LogCallback // Real-time log callback
@@ -29,16 +30,18 @@ type Runner struct {
 }
 
 // NewRunner creates a new Runner instance
-func NewRunner(servers []Server, commands []string, creds *Credentials, maxConcurrent int) *Runner {
+func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int) *Runner {
 	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
-	// Force sequential execution to avoid output truncation issues
-	maxConcurrent = 1
+	if chunkTimeout <= 0 {
+		chunkTimeout = 3
+	}
 	return &Runner{
 		Servers:       servers,
 		Commands:      commands,
 		Credentials:   creds,
 		LogDir:        logDir,
-		MaxConcurrent: maxConcurrent,
+		MaxConcurrent: 1, // Force sequential execution to avoid output truncation issues
+		ChunkTimeout:  chunkTimeout,
 		results:       make([]ExecutionResult, 0, len(servers)),
 	}
 }
@@ -173,7 +176,7 @@ func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
 			}
 		}
 
-		output, err := ExecuteCommands(server, r.Credentials, r.Commands, logCallback)
+		output, err := ExecuteCommands(server, r.Credentials, r.Commands, r.ChunkTimeout, logCallback)
 		result.Duration = time.Since(startTime).Milliseconds()
 
 		if err != nil {

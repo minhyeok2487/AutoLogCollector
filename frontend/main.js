@@ -5,6 +5,7 @@ const runtime = window.go?.main?.App;
 const elements = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
+    timeout: document.getElementById('timeout'),
     serversBody: document.getElementById('serversBody'),
     commandsInput: document.getElementById('commandsInput'),
     runBtn: document.getElementById('runBtn'),
@@ -391,6 +392,7 @@ function clearLiveLogs() {
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
+    const timeout = parseInt(elements.timeout.value) || 10;
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -416,7 +418,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, 1);
+        const success = await runtime.StartExecution(username, password, timeout);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -552,6 +554,7 @@ function setRunningState(running) {
     elements.stopBtn.disabled = !running;
     elements.username.disabled = running;
     elements.password.disabled = running;
+    elements.timeout.disabled = running;
 
     // Disable server table inputs
     const serverInputs = elements.serversBody?.querySelectorAll('input, button') || [];
