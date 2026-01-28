@@ -54,8 +54,8 @@ export function SetServers(arg1) {
   return window['go']['main']['App']['SetServers'](arg1);
 }
 
-export function StartExecution(arg1, arg2, arg3) {
-  return window['go']['main']['App']['StartExecution'](arg1, arg2, arg3);
+export function StartExecution(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['StartExecution'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function StopExecution() {

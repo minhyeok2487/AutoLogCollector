@@ -107,7 +107,7 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 }
 
 // StartExecution begins the command execution
-func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging bool) bool {
+func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging bool, enablePassword string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -135,8 +135,9 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 	}
 
 	creds := &cisco.Credentials{
-		User:     username,
-		Password: password,
+		User:           username,
+		Password:       password,
+		EnablePassword: enablePassword,
 	}
 
 	a.runner = cisco.NewRunner(a.servers, a.commands, creds, timeout, enableMode, disablePaging)

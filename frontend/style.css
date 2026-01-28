@@ -307,13 +307,47 @@ body {
 .options-row {
     display: flex;
     gap: 24px;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--panel-border);
+}
+
+.options-row:first-of-type {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--panel-border);
+}
+
+.options-row:not(:first-of-type) {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 8px;
 }
 
 .options-row .checkbox-label {
     color: var(--text-primary);
+}
+
+.enable-password-options {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: 8px;
+}
+
+.enable-password-options input[type="password"] {
+    padding: 8px 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    font-size: 13px;
+    width: 180px;
+    color: var(--text-primary);
+    background: var(--panel-bg);
+}
+
+.enable-password-options input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent-blue);
 }
 
 .form-group {

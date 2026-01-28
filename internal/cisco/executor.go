@@ -207,8 +207,8 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, chunk
 		enableOutput := readOutput(2*time.Second, false)
 		output.WriteString(enableOutput)
 
-		// Send enable password (same as login password)
-		sendCommand(creds.Password)
+		// Send enable password
+		sendCommand(creds.EnablePassword)
 		time.Sleep(500 * time.Millisecond)
 		passwordOutput := readOutput(2*time.Second, false)
 		output.WriteString(passwordOutput)

@@ -8,6 +8,9 @@ const elements = {
     timeout: document.getElementById('timeout'),
     enableMode: document.getElementById('enableMode'),
     disablePaging: document.getElementById('disablePaging'),
+    enablePasswordOptions: document.getElementById('enablePasswordOptions'),
+    samePassword: document.getElementById('samePassword'),
+    enablePassword: document.getElementById('enablePassword'),
     serversBody: document.getElementById('serversBody'),
     commandsInput: document.getElementById('commandsInput'),
     runBtn: document.getElementById('runBtn'),
@@ -214,6 +217,25 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// ==================== Enable Mode Options ====================
+
+function toggleEnablePassword() {
+    const enableMode = elements.enableMode?.checked;
+    if (elements.enablePasswordOptions) {
+        elements.enablePasswordOptions.style.display = enableMode ? 'flex' : 'none';
+    }
+}
+
+function toggleEnablePasswordInput() {
+    const samePassword = elements.samePassword?.checked;
+    if (elements.enablePassword) {
+        elements.enablePassword.style.display = samePassword ? 'none' : 'block';
+        if (samePassword) {
+            elements.enablePassword.value = '';
+        }
+    }
+}
+
 // ==================== Update Functions ====================
 
 async function checkForUpdates() {
@@ -413,8 +435,15 @@ async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
     const timeout = parseInt(elements.timeout.value) || 1;
-    const enableMode = elements.enableMode?.checked ?? true;
-    const disablePaging = elements.disablePaging?.checked ?? true;
+    const enableMode = elements.enableMode?.checked ?? false;
+    const disablePaging = elements.disablePaging?.checked ?? false;
+
+    // Get enable password (use login password if "same" is checked)
+    let enablePwd = '';
+    if (enableMode) {
+        const sameAsLogin = elements.samePassword?.checked ?? true;
+        enablePwd = sameAsLogin ? password : (elements.enablePassword?.value || '');
+    }
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -440,7 +469,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging);
+        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging, enablePwd);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -575,6 +604,8 @@ function setRunningState(running) {
     elements.timeout.disabled = running;
     if (elements.enableMode) elements.enableMode.disabled = running;
     if (elements.disablePaging) elements.disablePaging.disabled = running;
+    if (elements.samePassword) elements.samePassword.disabled = running;
+    if (elements.enablePassword) elements.enablePassword.disabled = running;
 
     // Update status dot
     if (elements.statusDot) {
@@ -633,3 +664,5 @@ window.restartApp = restartApp;
 window.toggleSettingsMenu = toggleSettingsMenu;
 window.closeSettingsMenu = closeSettingsMenu;
 window.exportResults = exportResults;
+window.toggleEnablePassword = toggleEnablePassword;
+window.toggleEnablePasswordInput = toggleEnablePasswordInput;

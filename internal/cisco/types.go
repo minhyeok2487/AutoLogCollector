@@ -8,8 +8,9 @@ type Server struct {
 
 // Credentials holds SSH login information
 type Credentials struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
+	User           string `json:"user"`
+	Password       string `json:"password"`
+	EnablePassword string `json:"enablePassword"`
 }
 
 // ExecutionResult represents the result of executing commands on a server

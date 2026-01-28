@@ -85,13 +85,22 @@
                             </div>
                             <div class="options-row">
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="enableMode" checked>
-                                    Enable Mode <span class="help-icon" title="enable 명령으로 privileged 모드 진입">?</span>
+                                    <input type="checkbox" id="disablePaging">
+                                    Disable Paging <span class="help-icon" title="terminal length 0 명령 실행. 출력이 페이지 단위로 끊기지 않고 전체 출력됨. Cisco IOS 장비에서 사용.">?</span>
                                 </label>
+                            </div>
+                            <div class="options-row">
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="disablePaging" checked>
-                                    Disable Paging <span class="help-icon" title="terminal length 0 명령으로 페이징 비활성화">?</span>
+                                    <input type="checkbox" id="enableMode" onchange="toggleEnablePassword()">
+                                    Enable Mode <span class="help-icon" title="enable 명령으로 privileged EXEC 모드 진입. 관리자 권한이 필요한 명령 실행 시 필요.">?</span>
                                 </label>
+                                <div class="enable-password-options" id="enablePasswordOptions" style="display: none;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="samePassword" checked onchange="toggleEnablePasswordInput()">
+                                        로그인 패스워드와 동일
+                                    </label>
+                                    <input type="password" id="enablePassword" placeholder="Enable password" style="display: none;">
+                                </div>
                             </div>
                         </div>
                     </div>
