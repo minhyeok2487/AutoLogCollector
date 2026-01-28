@@ -24,11 +24,12 @@ type ScheduledTask struct {
 	EnablePassword string `json:"enablePassword,omitempty"`
 
 	// Execution configuration
-	Servers       []cisco.Server `json:"servers"`
-	Commands      []string       `json:"commands"`
-	Timeout       int            `json:"timeout"`
-	EnableMode    bool           `json:"enableMode"`
-	DisablePaging bool           `json:"disablePaging"`
+	Servers         []cisco.Server `json:"servers"`
+	Commands        []string       `json:"commands"`
+	Timeout         int            `json:"timeout"`
+	EnableMode      bool           `json:"enableMode"`
+	DisablePaging   bool           `json:"disablePaging"`
+	AutoExportExcel bool           `json:"autoExportExcel"`
 
 	// Metadata
 	LastRun *time.Time `json:"lastRun,omitempty"`

@@ -92,6 +92,10 @@
                                     <input type="checkbox" id="disablePaging" checked>
                                     Disable Paging <span class="help-icon" title="terminal length 0 명령 실행. 출력이 페이지 단위로 끊기지 않고 전체 출력됨. Cisco IOS 장비에서 사용.">?</span>
                                 </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoExportExcel" checked>
+                                    Auto Export Excel <span class="help-icon" title="실행 완료 후 자동으로 Excel 파일 생성.">?</span>
+                                </label>
                             </div>
                             <div class="options-row">
                                 <label class="checkbox-label">
@@ -447,6 +451,10 @@ show run"></textarea>
                             <label class="checkbox-label">
                                 <input type="checkbox" id="scheduleDisablePaging" checked>
                                 Disable Paging
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="scheduleAutoExportExcel" checked>
+                                Auto Export Excel
                             </label>
                             <label class="checkbox-label">
                                 <input type="checkbox" id="scheduleEnableMode">

@@ -8,6 +8,7 @@ const elements = {
     timeout: document.getElementById('timeout'),
     enableMode: document.getElementById('enableMode'),
     disablePaging: document.getElementById('disablePaging'),
+    autoExportExcel: document.getElementById('autoExportExcel'),
     enablePasswordOptions: document.getElementById('enablePasswordOptions'),
     samePassword: document.getElementById('samePassword'),
     enablePassword: document.getElementById('enablePassword'),
@@ -444,6 +445,7 @@ async function startExecution() {
     const timeout = parseInt(elements.timeout.value) || 1;
     const enableMode = elements.enableMode?.checked ?? false;
     const disablePaging = elements.disablePaging?.checked ?? true;
+    const autoExportExcel = elements.autoExportExcel?.checked ?? true;
 
     // Get enable password (use login password if "same" is checked)
     let enablePwd = '';
@@ -476,7 +478,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging, enablePwd);
+        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging, autoExportExcel, enablePwd);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -541,7 +543,7 @@ function handleResult(data) {
 }
 
 function handleCompleted(data) {
-    const { success, fail, total, logDir } = data;
+    const { success, fail, total, logDir, autoExportExcel } = data;
 
     setRunningState(false);
 
@@ -554,6 +556,11 @@ function handleCompleted(data) {
 
     setStatus(`Completed: ${success} success, ${fail} failed`);
     updateConnectionInfo('No active connections');
+
+    // Auto export Excel if enabled (from event data)
+    if (autoExportExcel) {
+        exportResults();
+    }
 
     // Auto switch to results section
     showSection('results');
@@ -611,6 +618,7 @@ function setRunningState(running) {
     elements.timeout.disabled = running;
     if (elements.enableMode) elements.enableMode.disabled = running;
     if (elements.disablePaging) elements.disablePaging.disabled = running;
+    if (elements.autoExportExcel) elements.autoExportExcel.disabled = running;
     if (elements.samePassword) elements.samePassword.disabled = running;
     if (elements.enablePassword) elements.enablePassword.disabled = running;
 
@@ -761,6 +769,7 @@ function showScheduleForm(scheduleId = null) {
     document.getElementById('scheduleTime').value = '09:00';
     document.getElementById('scheduleTimeout').value = '1';
     document.getElementById('scheduleDisablePaging').checked = true;
+    document.getElementById('scheduleAutoExportExcel').checked = true;
     document.getElementById('scheduleEnableMode').checked = false;
     document.getElementById('scheduleServersBody').innerHTML = '';
     document.getElementById('scheduleCommands').value = '';
@@ -796,6 +805,7 @@ function populateScheduleForm(schedule) {
     document.getElementById('scheduleTime').value = schedule.time;
     document.getElementById('scheduleTimeout').value = schedule.timeout || 1;
     document.getElementById('scheduleDisablePaging').checked = schedule.disablePaging;
+    document.getElementById('scheduleAutoExportExcel').checked = schedule.autoExportExcel !== false;
     document.getElementById('scheduleEnableMode').checked = schedule.enableMode;
 
     if (schedule.daysOfWeek) {
@@ -867,6 +877,7 @@ function getScheduleFormData() {
     const time = document.getElementById('scheduleTime').value;
     const timeout = parseInt(document.getElementById('scheduleTimeout').value) || 1;
     const disablePaging = document.getElementById('scheduleDisablePaging').checked;
+    const autoExportExcel = document.getElementById('scheduleAutoExportExcel').checked;
     const enableMode = document.getElementById('scheduleEnableMode').checked;
 
     // Get days of week
@@ -908,6 +919,7 @@ function getScheduleFormData() {
         commands,
         timeout,
         disablePaging,
+        autoExportExcel,
         enableMode,
         enabled: true
     };

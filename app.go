@@ -26,13 +26,14 @@ const (
 
 // App struct
 type App struct {
-	ctx       context.Context
-	runner    *cisco.Runner
-	updater   *updater.Updater
-	scheduler *scheduler.Scheduler
-	mu        sync.Mutex
-	servers   []cisco.Server
-	commands  []string
+	ctx             context.Context
+	runner          *cisco.Runner
+	updater         *updater.Updater
+	scheduler       *scheduler.Scheduler
+	mu              sync.Mutex
+	servers         []cisco.Server
+	commands        []string
+	autoExportExcel bool // Flag for auto Excel export on completion
 }
 
 // NewApp creates a new App application struct
@@ -96,8 +97,8 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 	a.commands = task.Commands
 	a.mu.Unlock()
 
-	// Start execution with task's credentials
-	a.StartExecution(task.Username, task.Password, task.Timeout, task.EnableMode, task.DisablePaging, task.EnablePassword)
+	// Start execution with task's credentials and options
+	a.StartExecution(task.Username, task.Password, task.Timeout, task.EnableMode, task.DisablePaging, task.AutoExportExcel, task.EnablePassword)
 }
 
 // SetServers sets the server list from GUI input
@@ -165,7 +166,7 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 }
 
 // StartExecution begins the command execution
-func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging bool, enablePassword string) bool {
+func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging, autoExportExcel bool, enablePassword string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -191,6 +192,9 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 	if timeout <= 0 {
 		timeout = 1
 	}
+
+	// Store autoExportExcel flag for completion event
+	a.autoExportExcel = autoExportExcel
 
 	creds := &cisco.Credentials{
 		User:           username,
@@ -232,10 +236,11 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 		success, fail, total := a.runner.GetSummary()
 		if success+fail == total {
 			runtime.EventsEmit(a.ctx, "completed", map[string]interface{}{
-				"success": success,
-				"fail":    fail,
-				"total":   total,
-				"logDir":  a.runner.LogDir,
+				"success":         success,
+				"fail":            fail,
+				"total":           total,
+				"logDir":          a.runner.LogDir,
+				"autoExportExcel": a.autoExportExcel,
 			})
 		}
 	}
@@ -534,6 +539,9 @@ func (a *App) mapToScheduledTask(data map[string]interface{}) *scheduler.Schedul
 	if disablePaging, ok := data["disablePaging"].(bool); ok {
 		task.DisablePaging = disablePaging
 	}
+	if autoExportExcel, ok := data["autoExportExcel"].(bool); ok {
+		task.AutoExportExcel = autoExportExcel
+	}
 
 	// Parse credentials
 	if username, ok := data["username"].(string); ok {
@@ -592,21 +600,22 @@ func (a *App) scheduledTaskToMap(task *scheduler.ScheduledTask) map[string]inter
 	}
 
 	result := map[string]interface{}{
-		"id":             task.ID,
-		"name":           task.Name,
-		"enabled":        task.Enabled,
-		"scheduleType":   task.ScheduleType,
-		"time":           task.Time,
-		"daysOfWeek":     task.DaysOfWeek,
-		"dayOfMonth":     task.DayOfMonth,
-		"username":       task.Username,
-		"password":       task.Password,
-		"enablePassword": task.EnablePassword,
-		"servers":        servers,
-		"commands":       task.Commands,
-		"timeout":        task.Timeout,
-		"enableMode":     task.EnableMode,
-		"disablePaging":  task.DisablePaging,
+		"id":              task.ID,
+		"name":            task.Name,
+		"enabled":         task.Enabled,
+		"scheduleType":    task.ScheduleType,
+		"time":            task.Time,
+		"daysOfWeek":      task.DaysOfWeek,
+		"dayOfMonth":      task.DayOfMonth,
+		"username":        task.Username,
+		"password":        task.Password,
+		"enablePassword":  task.EnablePassword,
+		"servers":         servers,
+		"commands":        task.Commands,
+		"timeout":         task.Timeout,
+		"enableMode":      task.EnableMode,
+		"disablePaging":   task.DisablePaging,
+		"autoExportExcel": task.AutoExportExcel,
 	}
 
 	if task.LastRun != nil {
