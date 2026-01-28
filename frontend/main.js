@@ -33,7 +33,7 @@ const elements = {
 // State
 let liveLogs = [];
 let serverLogs = {};
-let currentServerTab = 'all';
+let currentServerTab = null;  // null means show all logs
 let knownServers = new Set();
 let latestUpdateInfo = null;
 let currentSection = 'execution';
@@ -324,7 +324,8 @@ function handleLog(data) {
     }
     serverLogs[serverIP].push(logEntry);
 
-    if (currentServerTab === 'all' || currentServerTab === serverIP) {
+    // Show log if no filter or matches current filter
+    if (!currentServerTab || currentServerTab === serverIP) {
         appendToLogView(logEntry);
     }
 
@@ -341,18 +342,16 @@ function appendToLogView(logEntry) {
     logLine.className = 'log-line';
     logLine.dataset.serverIp = logEntry.serverIP;
 
-    if (currentServerTab === 'all') {
-        logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
-                            `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
-                            `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
-    } else {
-        logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
-                            `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
-    }
+    logLine.innerHTML = `<span class="log-time">[${logEntry.formattedTime}]</span> ` +
+                        `<span class="log-server">[${escapeHtml(logEntry.hostname)}]</span> ` +
+                        `<span class="log-text">${escapeHtml(logEntry.line)}</span>`;
     logContent.appendChild(logLine);
 
+    // Auto-scroll to bottom
     if (elements.autoScroll?.checked) {
-        logContent.scrollTop = logContent.scrollHeight;
+        requestAnimationFrame(() => {
+            logContent.scrollTop = logContent.scrollHeight;
+        });
     }
 
     while (logContent.children.length > 5000) {
@@ -386,7 +385,7 @@ function switchServerTab(serverIP) {
     if (!logContent) return;
     logContent.innerHTML = '';
 
-    let logsToShow = serverIP === 'all' ? liveLogs : (serverLogs[serverIP] || []);
+    let logsToShow = serverLogs[serverIP] || [];
     logsToShow.forEach(log => appendToLogView(log));
 }
 
@@ -394,7 +393,7 @@ function clearLiveLogs() {
     liveLogs = [];
     serverLogs = {};
     knownServers.clear();
-    currentServerTab = 'all';
+    currentServerTab = null;
 
     if (elements.combinedLogContent) {
         elements.combinedLogContent.innerHTML = '';
@@ -402,7 +401,7 @@ function clearLiveLogs() {
 
     const tabsContainer = document.getElementById('serverTabs');
     if (tabsContainer) {
-        tabsContainer.innerHTML = '<button class="server-tab active" data-server="all" onclick="switchServerTab(\'all\')">All</button>';
+        tabsContainer.innerHTML = '';
     }
 }
 
