@@ -6,6 +6,18 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function ClearCredentials() {
+  return window['go']['main']['App']['ClearCredentials']();
+}
+
+export function CreateSchedule(arg1) {
+  return window['go']['main']['App']['CreateSchedule'](arg1);
+}
+
+export function DeleteSchedule(arg1) {
+  return window['go']['main']['App']['DeleteSchedule'](arg1);
+}
+
 export function DownloadAndInstallUpdate(arg1) {
   return window['go']['main']['App']['DownloadAndInstallUpdate'](arg1);
 }
@@ -24,6 +36,14 @@ export function GetCurrentVersion() {
 
 export function GetLogFiles() {
   return window['go']['main']['App']['GetLogFiles']();
+}
+
+export function GetSchedules() {
+  return window['go']['main']['App']['GetSchedules']();
+}
+
+export function HasCredentials() {
+  return window['go']['main']['App']['HasCredentials']();
 }
 
 export function ImportServersFromCSV() {
@@ -46,8 +66,16 @@ export function RestartApp() {
   return window['go']['main']['App']['RestartApp']();
 }
 
+export function RunScheduleNow(arg1) {
+  return window['go']['main']['App']['RunScheduleNow'](arg1);
+}
+
 export function SetCommands(arg1) {
   return window['go']['main']['App']['SetCommands'](arg1);
+}
+
+export function SetCredentials(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetCredentials'](arg1, arg2, arg3);
 }
 
 export function SetServers(arg1) {
@@ -60,4 +88,12 @@ export function StartExecution(arg1, arg2, arg3, arg4, arg5, arg6) {
 
 export function StopExecution() {
   return window['go']['main']['App']['StopExecution']();
+}
+
+export function ToggleSchedule(arg1, arg2) {
+  return window['go']['main']['App']['ToggleSchedule'](arg1, arg2);
+}
+
+export function UpdateSchedule(arg1) {
+  return window['go']['main']['App']['UpdateSchedule'](arg1);
 }

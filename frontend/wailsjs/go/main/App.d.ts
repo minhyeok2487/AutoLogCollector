@@ -4,6 +4,12 @@ import {updater} from '../models';
 
 export function CheckForUpdates():Promise<updater.UpdateInfo>;
 
+export function ClearCredentials():Promise<void>;
+
+export function CreateSchedule(arg1:Record<string, any>):Promise<string>;
+
+export function DeleteSchedule(arg1:string):Promise<boolean>;
+
 export function DownloadAndInstallUpdate(arg1:string):Promise<boolean>;
 
 export function ExportResults():Promise<string>;
@@ -13,6 +19,10 @@ export function GetCurrentLogDir():Promise<string>;
 export function GetCurrentVersion():Promise<string>;
 
 export function GetLogFiles():Promise<Array<Record<string, string>>>;
+
+export function GetSchedules():Promise<Array<Record<string, any>>>;
+
+export function HasCredentials():Promise<boolean>;
 
 export function ImportServersFromCSV():Promise<Array<Record<string, string>>>;
 
@@ -24,10 +34,18 @@ export function ReadLogFile(arg1:string):Promise<string>;
 
 export function RestartApp():Promise<void>;
 
+export function RunScheduleNow(arg1:string):Promise<boolean>;
+
 export function SetCommands(arg1:Array<string>):Promise<void>;
+
+export function SetCredentials(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetServers(arg1:Array<Record<string, string>>):Promise<void>;
 
 export function StartExecution(arg1:string,arg2:string,arg3:number,arg4:boolean,arg5:boolean,arg6:string):Promise<boolean>;
 
 export function StopExecution():Promise<void>;
+
+export function ToggleSchedule(arg1:string,arg2:boolean):Promise<boolean>;
+
+export function UpdateSchedule(arg1:Record<string, any>):Promise<boolean>;

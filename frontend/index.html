@@ -27,6 +27,10 @@
                     <span class="nav-icon">📋</span>
                     <span class="nav-text">Live Logs</span>
                 </button>
+                <button class="nav-item" data-section="schedule" onclick="showSection('schedule')">
+                    <span class="nav-icon">⏰</span>
+                    <span class="nav-text">Schedule</span>
+                </button>
             </nav>
             <div class="sidebar-footer">
                 <button class="nav-item" onclick="openLogsFolder()">
@@ -223,6 +227,44 @@ show run"></textarea>
                         </div>
                     </div>
                 </section>
+
+                <!-- Schedule Section -->
+                <section class="content-section" id="scheduleSection" style="display: none;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Scheduled Tasks</h2>
+                            <div class="panel-actions">
+                                <span class="credential-status" id="credentialStatus">
+                                    <span class="status-indicator inactive"></span>
+                                    No credentials
+                                </span>
+                                <button class="btn-primary" onclick="showScheduleForm()">+ New Schedule</button>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Time</th>
+                                            <th>Next Run</th>
+                                            <th>Last Run</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="schedulesBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="empty-state" id="noSchedules">
+                                <p>No scheduled tasks. Click "+ New Schedule" to create one.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </main>
 
             <!-- Status Bar -->
@@ -271,6 +313,166 @@ show run"></textarea>
                 <div class="modal-body">
                     <h3 id="logTitle"></h3>
                     <pre class="log-viewer-content" id="logContent"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Form Modal -->
+        <div class="modal-overlay" id="scheduleModal" style="display: none;">
+            <div class="modal modal-large">
+                <div class="modal-header">
+                    <h2 id="scheduleModalTitle">New Schedule</h2>
+                    <button class="close-btn" onclick="closeScheduleForm()">&times;</button>
+                </div>
+                <div class="modal-body schedule-form">
+                    <input type="hidden" id="scheduleId">
+
+                    <div class="form-section">
+                        <h3>Basic Info</h3>
+                        <div class="form-group">
+                            <label>Schedule Name</label>
+                            <input type="text" id="scheduleName" placeholder="e.g., Daily Backup Check">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Schedule Type</h3>
+                        <div class="schedule-type-selector">
+                            <label class="radio-card">
+                                <input type="radio" name="scheduleType" value="daily" checked onchange="updateScheduleOptions()">
+                                <span class="radio-card-content">
+                                    <span class="radio-card-title">Daily</span>
+                                    <span class="radio-card-desc">Run every day</span>
+                                </span>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="scheduleType" value="weekly" onchange="updateScheduleOptions()">
+                                <span class="radio-card-content">
+                                    <span class="radio-card-title">Weekly</span>
+                                    <span class="radio-card-desc">Run on specific days</span>
+                                </span>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="scheduleType" value="monthly" onchange="updateScheduleOptions()">
+                                <span class="radio-card-content">
+                                    <span class="radio-card-title">Monthly</span>
+                                    <span class="radio-card-desc">Run on specific date</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Time</label>
+                                <input type="time" id="scheduleTime" value="09:00">
+                            </div>
+                        </div>
+
+                        <div id="weeklyOptions" style="display: none;">
+                            <label>Days of Week</label>
+                            <div class="days-selector">
+                                <label class="day-checkbox"><input type="checkbox" value="0"> Sun</label>
+                                <label class="day-checkbox"><input type="checkbox" value="1" checked> Mon</label>
+                                <label class="day-checkbox"><input type="checkbox" value="2" checked> Tue</label>
+                                <label class="day-checkbox"><input type="checkbox" value="3" checked> Wed</label>
+                                <label class="day-checkbox"><input type="checkbox" value="4" checked> Thu</label>
+                                <label class="day-checkbox"><input type="checkbox" value="5" checked> Fri</label>
+                                <label class="day-checkbox"><input type="checkbox" value="6"> Sat</label>
+                            </div>
+                        </div>
+
+                        <div id="monthlyOptions" style="display: none;">
+                            <div class="form-group">
+                                <label>Day of Month</label>
+                                <select id="dayOfMonth">
+                                    <option value="1">1st</option>
+                                    <option value="2">2nd</option>
+                                    <option value="3">3rd</option>
+                                    <option value="4">4th</option>
+                                    <option value="5">5th</option>
+                                    <option value="6">6th</option>
+                                    <option value="7">7th</option>
+                                    <option value="8">8th</option>
+                                    <option value="9">9th</option>
+                                    <option value="10">10th</option>
+                                    <option value="11">11th</option>
+                                    <option value="12">12th</option>
+                                    <option value="13">13th</option>
+                                    <option value="14">14th</option>
+                                    <option value="15">15th</option>
+                                    <option value="16">16th</option>
+                                    <option value="17">17th</option>
+                                    <option value="18">18th</option>
+                                    <option value="19">19th</option>
+                                    <option value="20">20th</option>
+                                    <option value="21">21st</option>
+                                    <option value="22">22nd</option>
+                                    <option value="23">23rd</option>
+                                    <option value="24">24th</option>
+                                    <option value="25">25th</option>
+                                    <option value="26">26th</option>
+                                    <option value="27">27th</option>
+                                    <option value="28">28th</option>
+                                    <option value="29">29th</option>
+                                    <option value="30">30th</option>
+                                    <option value="31">31st</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Execution Options</h3>
+                        <div class="form-row">
+                            <div class="form-group form-group-small">
+                                <label>Timeout (sec)</label>
+                                <input type="number" id="scheduleTimeout" min="1" max="60" value="1">
+                            </div>
+                        </div>
+                        <div class="options-row">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="scheduleDisablePaging" checked>
+                                Disable Paging
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="scheduleEnableMode">
+                                Enable Mode
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Target Servers</h3>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary btn-small" onclick="copyServersFromExecution()">Copy from Execution</button>
+                            <button type="button" class="btn-secondary btn-small" onclick="addScheduleServerRow()">+ Add</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Hostname</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scheduleServersBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Commands</h3>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary btn-small" onclick="copyCommandsFromExecution()">Copy from Execution</button>
+                        </div>
+                        <textarea id="scheduleCommands" class="commands-textarea" placeholder="Enter commands (one per line)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" onclick="saveSchedule()">Save Schedule</button>
+                    <button class="btn-secondary" onclick="closeScheduleForm()">Cancel</button>
                 </div>
             </div>
         </div>

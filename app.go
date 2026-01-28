@@ -8,8 +8,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"cisco-plink/internal/cisco"
+	"cisco-plink/internal/config"
+	"cisco-plink/internal/scheduler"
 	"cisco-plink/internal/updater"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -23,12 +26,14 @@ const (
 
 // App struct
 type App struct {
-	ctx      context.Context
-	runner   *cisco.Runner
-	updater  *updater.Updater
-	mu       sync.Mutex
-	servers  []cisco.Server
-	commands []string
+	ctx         context.Context
+	runner      *cisco.Runner
+	updater     *updater.Updater
+	scheduler   *scheduler.Scheduler
+	mu          sync.Mutex
+	servers     []cisco.Server
+	commands    []string
+	credentials *cisco.Credentials // Session credentials for scheduled tasks
 }
 
 // NewApp creates a new App application struct
@@ -40,6 +45,64 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.updater = updater.NewUpdater(GitHubOwner, GitHubRepo)
+
+	// Initialize scheduler
+	a.scheduler = scheduler.NewScheduler(a.executeScheduledTask)
+	a.scheduler.Start()
+
+	// Load saved schedules
+	cfg, err := config.Load()
+	if err == nil && len(cfg.Schedules) > 0 {
+		a.scheduler.LoadTasks(cfg.Schedules)
+	}
+}
+
+// shutdown is called when the app is closing
+func (a *App) shutdown(ctx context.Context) {
+	if a.scheduler != nil {
+		a.scheduler.Stop()
+	}
+}
+
+// executeScheduledTask is called when a scheduled task triggers
+func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
+	a.mu.Lock()
+	creds := a.credentials
+	a.mu.Unlock()
+
+	if creds == nil || creds.User == "" || creds.Password == "" {
+		runtime.EventsEmit(a.ctx, "scheduleSkipped", map[string]interface{}{
+			"taskId":   task.ID,
+			"taskName": task.Name,
+			"reason":   "No credentials set. Please enter username and password.",
+		})
+		return
+	}
+
+	// Check if another execution is running
+	if a.runner != nil && a.runner.IsRunning() {
+		runtime.EventsEmit(a.ctx, "scheduleSkipped", map[string]interface{}{
+			"taskId":   task.ID,
+			"taskName": task.Name,
+			"reason":   "Another execution is already running.",
+		})
+		return
+	}
+
+	// Emit schedule started event
+	runtime.EventsEmit(a.ctx, "scheduleStarted", map[string]interface{}{
+		"taskId":   task.ID,
+		"taskName": task.Name,
+	})
+
+	// Set servers and commands from task
+	a.mu.Lock()
+	a.servers = task.Servers
+	a.commands = task.Commands
+	a.mu.Unlock()
+
+	// Start execution
+	a.StartExecution(creds.User, creds.Password, task.Timeout, task.EnableMode, task.DisablePaging, creds.EnablePassword)
 }
 
 // SetServers sets the server list from GUI input
@@ -349,4 +412,226 @@ func (a *App) ExportResults() string {
 	}
 
 	return outputPath
+}
+
+// ==================== Schedule Management ====================
+
+// SetCredentials stores session credentials for scheduled tasks
+func (a *App) SetCredentials(username, password, enablePassword string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.credentials = &cisco.Credentials{
+		User:           username,
+		Password:       password,
+		EnablePassword: enablePassword,
+	}
+}
+
+// ClearCredentials clears stored credentials
+func (a *App) ClearCredentials() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.credentials = nil
+}
+
+// HasCredentials returns whether credentials are set
+func (a *App) HasCredentials() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.credentials != nil && a.credentials.User != "" && a.credentials.Password != ""
+}
+
+// CreateSchedule creates a new scheduled task
+func (a *App) CreateSchedule(taskData map[string]interface{}) string {
+	task := a.mapToScheduledTask(taskData)
+	task.Enabled = true
+
+	if err := a.scheduler.AddTask(task); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to create schedule: "+err.Error())
+		return ""
+	}
+
+	a.saveSchedules()
+	return task.ID
+}
+
+// UpdateSchedule updates an existing scheduled task
+func (a *App) UpdateSchedule(taskData map[string]interface{}) bool {
+	task := a.mapToScheduledTask(taskData)
+
+	if err := a.scheduler.UpdateTask(task); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to update schedule: "+err.Error())
+		return false
+	}
+
+	a.saveSchedules()
+	return true
+}
+
+// DeleteSchedule removes a scheduled task
+func (a *App) DeleteSchedule(id string) bool {
+	if err := a.scheduler.DeleteTask(id); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to delete schedule: "+err.Error())
+		return false
+	}
+
+	a.saveSchedules()
+	return true
+}
+
+// GetSchedules returns all scheduled tasks
+func (a *App) GetSchedules() []map[string]interface{} {
+	tasks := a.scheduler.GetTasks()
+	result := make([]map[string]interface{}, len(tasks))
+
+	for i, task := range tasks {
+		result[i] = a.scheduledTaskToMap(task)
+	}
+
+	return result
+}
+
+// ToggleSchedule enables or disables a scheduled task
+func (a *App) ToggleSchedule(id string, enabled bool) bool {
+	if err := a.scheduler.ToggleTask(id, enabled); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to toggle schedule: "+err.Error())
+		return false
+	}
+
+	a.saveSchedules()
+	return true
+}
+
+// RunScheduleNow manually triggers a scheduled task
+func (a *App) RunScheduleNow(id string) bool {
+	task := a.scheduler.GetTask(id)
+	if task == nil {
+		runtime.EventsEmit(a.ctx, "error", "Schedule not found")
+		return false
+	}
+
+	go a.executeScheduledTask(task)
+	return true
+}
+
+// saveSchedules saves all schedules to config file
+func (a *App) saveSchedules() {
+	tasks := a.scheduler.GetTasks()
+	if err := config.SaveSchedules(tasks); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to save schedules: "+err.Error())
+	}
+}
+
+// mapToScheduledTask converts a map to ScheduledTask
+func (a *App) mapToScheduledTask(data map[string]interface{}) *scheduler.ScheduledTask {
+	task := &scheduler.ScheduledTask{
+		Timeout:       1,
+		DisablePaging: true,
+	}
+
+	if id, ok := data["id"].(string); ok {
+		task.ID = id
+	}
+	if name, ok := data["name"].(string); ok {
+		task.Name = name
+	}
+	if enabled, ok := data["enabled"].(bool); ok {
+		task.Enabled = enabled
+	}
+	if scheduleType, ok := data["scheduleType"].(string); ok {
+		task.ScheduleType = scheduleType
+	}
+	if timeStr, ok := data["time"].(string); ok {
+		task.Time = timeStr
+	}
+	if daysOfWeek, ok := data["daysOfWeek"].([]interface{}); ok {
+		task.DaysOfWeek = make([]int, len(daysOfWeek))
+		for i, d := range daysOfWeek {
+			if day, ok := d.(float64); ok {
+				task.DaysOfWeek[i] = int(day)
+			}
+		}
+	}
+	if dayOfMonth, ok := data["dayOfMonth"].(float64); ok {
+		task.DayOfMonth = int(dayOfMonth)
+	}
+	if timeout, ok := data["timeout"].(float64); ok {
+		task.Timeout = int(timeout)
+	}
+	if enableMode, ok := data["enableMode"].(bool); ok {
+		task.EnableMode = enableMode
+	}
+	if disablePaging, ok := data["disablePaging"].(bool); ok {
+		task.DisablePaging = disablePaging
+	}
+
+	// Parse servers
+	if servers, ok := data["servers"].([]interface{}); ok {
+		task.Servers = make([]cisco.Server, 0, len(servers))
+		for _, s := range servers {
+			if serverMap, ok := s.(map[string]interface{}); ok {
+				server := cisco.Server{}
+				if ip, ok := serverMap["ip"].(string); ok {
+					server.IP = ip
+				}
+				if hostname, ok := serverMap["hostname"].(string); ok {
+					server.Hostname = hostname
+				}
+				if server.IP != "" {
+					if server.Hostname == "" {
+						server.Hostname = server.IP
+					}
+					task.Servers = append(task.Servers, server)
+				}
+			}
+		}
+	}
+
+	// Parse commands
+	if commands, ok := data["commands"].([]interface{}); ok {
+		task.Commands = make([]string, 0, len(commands))
+		for _, c := range commands {
+			if cmd, ok := c.(string); ok && cmd != "" {
+				task.Commands = append(task.Commands, cmd)
+			}
+		}
+	}
+
+	return task
+}
+
+// scheduledTaskToMap converts a ScheduledTask to map
+func (a *App) scheduledTaskToMap(task *scheduler.ScheduledTask) map[string]interface{} {
+	servers := make([]map[string]string, len(task.Servers))
+	for i, s := range task.Servers {
+		servers[i] = map[string]string{
+			"ip":       s.IP,
+			"hostname": s.Hostname,
+		}
+	}
+
+	result := map[string]interface{}{
+		"id":            task.ID,
+		"name":          task.Name,
+		"enabled":       task.Enabled,
+		"scheduleType":  task.ScheduleType,
+		"time":          task.Time,
+		"daysOfWeek":    task.DaysOfWeek,
+		"dayOfMonth":    task.DayOfMonth,
+		"servers":       servers,
+		"commands":      task.Commands,
+		"timeout":       task.Timeout,
+		"enableMode":    task.EnableMode,
+		"disablePaging": task.DisablePaging,
+	}
+
+	if task.LastRun != nil {
+		result["lastRun"] = task.LastRun.Format(time.RFC3339)
+	}
+	if task.NextRun != nil {
+		result["nextRun"] = task.NextRun.Format(time.RFC3339)
+	}
+
+	return result
 }

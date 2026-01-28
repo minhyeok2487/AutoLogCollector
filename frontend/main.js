@@ -100,7 +100,8 @@ function showSection(section) {
     const titles = {
         execution: 'Execution',
         results: 'Results',
-        logs: 'Live Logs'
+        logs: 'Live Logs',
+        schedule: 'Schedule'
     };
     elements.sectionTitle.textContent = titles[section] || section;
 
@@ -108,6 +109,13 @@ function showSection(section) {
     document.getElementById('executionSection').style.display = section === 'execution' ? 'flex' : 'none';
     document.getElementById('resultsSection').style.display = section === 'results' ? 'flex' : 'none';
     document.getElementById('logsSection').style.display = section === 'logs' ? 'flex' : 'none';
+    document.getElementById('scheduleSection').style.display = section === 'schedule' ? 'flex' : 'none';
+
+    // Load schedules when switching to schedule section
+    if (section === 'schedule') {
+        loadSchedules();
+        updateCredentialStatus();
+    }
 }
 
 // ==================== Server Table Management ====================
@@ -666,3 +674,380 @@ window.closeSettingsMenu = closeSettingsMenu;
 window.exportResults = exportResults;
 window.toggleEnablePassword = toggleEnablePassword;
 window.toggleEnablePasswordInput = toggleEnablePasswordInput;
+
+// ==================== Schedule Management ====================
+
+let schedules = [];
+
+// Update credentials when user types in username/password fields
+function setupCredentialSync() {
+    const usernameInput = elements.username;
+    const passwordInput = elements.password;
+    const enablePasswordInput = elements.enablePassword;
+
+    const syncCredentials = () => {
+        const username = usernameInput?.value?.trim() || '';
+        const password = passwordInput?.value || '';
+        const enablePwd = elements.enableMode?.checked ?
+            (elements.samePassword?.checked ? password : (enablePasswordInput?.value || '')) : '';
+
+        if (username && password) {
+            runtime.SetCredentials(username, password, enablePwd);
+        }
+        updateCredentialStatus();
+    };
+
+    usernameInput?.addEventListener('change', syncCredentials);
+    passwordInput?.addEventListener('change', syncCredentials);
+    enablePasswordInput?.addEventListener('change', syncCredentials);
+}
+
+// Initialize credential sync on load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(setupCredentialSync, 100);
+});
+
+async function updateCredentialStatus() {
+    try {
+        const hasCredentials = await runtime.HasCredentials();
+        const statusEl = document.getElementById('credentialStatus');
+        if (statusEl) {
+            const indicator = statusEl.querySelector('.status-indicator');
+            if (hasCredentials) {
+                indicator.classList.add('active');
+                statusEl.innerHTML = `<span class="status-indicator active"></span> Credentials set`;
+            } else {
+                indicator.classList.remove('active');
+                statusEl.innerHTML = `<span class="status-indicator"></span> No credentials`;
+            }
+        }
+    } catch (err) {
+        console.error('Failed to check credentials:', err);
+    }
+}
+
+async function loadSchedules() {
+    try {
+        schedules = await runtime.GetSchedules() || [];
+        renderSchedules();
+    } catch (err) {
+        console.error('Failed to load schedules:', err);
+    }
+}
+
+function renderSchedules() {
+    const tbody = document.getElementById('schedulesBody');
+    const emptyState = document.getElementById('noSchedules');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (schedules.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    schedules.forEach(schedule => {
+        const row = document.createElement('tr');
+
+        const typeLabels = {
+            daily: 'Daily',
+            weekly: 'Weekly',
+            monthly: 'Monthly'
+        };
+
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let scheduleDesc = schedule.time;
+        if (schedule.scheduleType === 'weekly' && schedule.daysOfWeek) {
+            const days = schedule.daysOfWeek.map(d => daysOfWeek[d]).join(', ');
+            scheduleDesc = `${schedule.time} (${days})`;
+        } else if (schedule.scheduleType === 'monthly') {
+            scheduleDesc = `${schedule.time} (Day ${schedule.dayOfMonth})`;
+        }
+
+        const nextRun = schedule.nextRun ? new Date(schedule.nextRun).toLocaleString() : '-';
+        const lastRun = schedule.lastRun ? new Date(schedule.lastRun).toLocaleString() : '-';
+
+        row.innerHTML = `
+            <td>${escapeHtml(schedule.name)}</td>
+            <td>${typeLabels[schedule.scheduleType] || schedule.scheduleType}</td>
+            <td>${scheduleDesc}</td>
+            <td>${nextRun}</td>
+            <td>${lastRun}</td>
+            <td>
+                <label class="toggle-switch">
+                    <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule('${schedule.id}', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </td>
+            <td>
+                <div class="schedule-actions">
+                    <button class="btn-icon-only" onclick="runScheduleNow('${schedule.id}')" title="Run Now">▶</button>
+                    <button class="btn-icon-only" onclick="editSchedule('${schedule.id}')" title="Edit">✎</button>
+                    <button class="btn-icon-only danger" onclick="deleteSchedule('${schedule.id}')" title="Delete">✕</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function showScheduleForm(scheduleId = null) {
+    const modal = document.getElementById('scheduleModal');
+    const title = document.getElementById('scheduleModalTitle');
+
+    // Reset form
+    document.getElementById('scheduleId').value = '';
+    document.getElementById('scheduleName').value = '';
+    document.querySelector('input[name="scheduleType"][value="daily"]').checked = true;
+    document.getElementById('scheduleTime').value = '09:00';
+    document.getElementById('scheduleTimeout').value = '1';
+    document.getElementById('scheduleDisablePaging').checked = true;
+    document.getElementById('scheduleEnableMode').checked = false;
+    document.getElementById('scheduleServersBody').innerHTML = '';
+    document.getElementById('scheduleCommands').value = '';
+
+    // Reset days checkboxes
+    document.querySelectorAll('.days-selector input[type="checkbox"]').forEach((cb, i) => {
+        cb.checked = (i >= 1 && i <= 5); // Mon-Fri default
+    });
+    document.getElementById('dayOfMonth').value = '1';
+
+    updateScheduleOptions();
+
+    if (scheduleId) {
+        title.textContent = 'Edit Schedule';
+        const schedule = schedules.find(s => s.id === scheduleId);
+        if (schedule) {
+            populateScheduleForm(schedule);
+        }
+    } else {
+        title.textContent = 'New Schedule';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function populateScheduleForm(schedule) {
+    document.getElementById('scheduleId').value = schedule.id;
+    document.getElementById('scheduleName').value = schedule.name;
+    document.querySelector(`input[name="scheduleType"][value="${schedule.scheduleType}"]`).checked = true;
+    document.getElementById('scheduleTime').value = schedule.time;
+    document.getElementById('scheduleTimeout').value = schedule.timeout || 1;
+    document.getElementById('scheduleDisablePaging').checked = schedule.disablePaging;
+    document.getElementById('scheduleEnableMode').checked = schedule.enableMode;
+
+    if (schedule.daysOfWeek) {
+        document.querySelectorAll('.days-selector input[type="checkbox"]').forEach(cb => {
+            cb.checked = schedule.daysOfWeek.includes(parseInt(cb.value));
+        });
+    }
+    if (schedule.dayOfMonth) {
+        document.getElementById('dayOfMonth').value = schedule.dayOfMonth;
+    }
+
+    // Populate servers
+    const tbody = document.getElementById('scheduleServersBody');
+    tbody.innerHTML = '';
+    (schedule.servers || []).forEach(server => {
+        addScheduleServerRow(server.ip, server.hostname);
+    });
+
+    // Populate commands
+    document.getElementById('scheduleCommands').value = (schedule.commands || []).join('\n');
+
+    updateScheduleOptions();
+}
+
+function closeScheduleForm() {
+    document.getElementById('scheduleModal').style.display = 'none';
+}
+
+function updateScheduleOptions() {
+    const type = document.querySelector('input[name="scheduleType"]:checked')?.value;
+    document.getElementById('weeklyOptions').style.display = type === 'weekly' ? 'block' : 'none';
+    document.getElementById('monthlyOptions').style.display = type === 'monthly' ? 'block' : 'none';
+}
+
+function addScheduleServerRow(ip = '', hostname = '') {
+    const tbody = document.getElementById('scheduleServersBody');
+    if (!tbody) return;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" placeholder="192.168.1.1" value="${escapeHtml(ip)}"></td>
+        <td><input type="text" placeholder="Router1" value="${escapeHtml(hostname)}"></td>
+        <td><button type="button" class="delete-btn" onclick="this.closest('tr').remove()">&times;</button></td>
+    `;
+    tbody.appendChild(row);
+}
+
+function copyServersFromExecution() {
+    const servers = getServersFromTable();
+    const tbody = document.getElementById('scheduleServersBody');
+    tbody.innerHTML = '';
+    servers.forEach(server => {
+        addScheduleServerRow(server.ip, server.hostname);
+    });
+}
+
+function copyCommandsFromExecution() {
+    const commands = elements.commandsInput?.value || '';
+    document.getElementById('scheduleCommands').value = commands;
+}
+
+function getScheduleFormData() {
+    const id = document.getElementById('scheduleId').value;
+    const name = document.getElementById('scheduleName').value.trim();
+    const scheduleType = document.querySelector('input[name="scheduleType"]:checked')?.value;
+    const time = document.getElementById('scheduleTime').value;
+    const timeout = parseInt(document.getElementById('scheduleTimeout').value) || 1;
+    const disablePaging = document.getElementById('scheduleDisablePaging').checked;
+    const enableMode = document.getElementById('scheduleEnableMode').checked;
+
+    // Get days of week
+    const daysOfWeek = [];
+    document.querySelectorAll('.days-selector input[type="checkbox"]:checked').forEach(cb => {
+        daysOfWeek.push(parseInt(cb.value));
+    });
+
+    const dayOfMonth = parseInt(document.getElementById('dayOfMonth').value) || 1;
+
+    // Get servers
+    const servers = [];
+    document.querySelectorAll('#scheduleServersBody tr').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length >= 2) {
+            const ip = inputs[0].value.trim();
+            const hostname = inputs[1].value.trim();
+            if (ip) {
+                servers.push({ ip, hostname: hostname || ip });
+            }
+        }
+    });
+
+    // Get commands
+    const commandsText = document.getElementById('scheduleCommands').value;
+    const commands = commandsText.split('\n').map(c => c.trim()).filter(c => c);
+
+    return {
+        id,
+        name,
+        scheduleType,
+        time,
+        daysOfWeek,
+        dayOfMonth,
+        servers,
+        commands,
+        timeout,
+        disablePaging,
+        enableMode,
+        enabled: true
+    };
+}
+
+async function saveSchedule() {
+    const data = getScheduleFormData();
+
+    if (!data.name) {
+        alert('Please enter a schedule name');
+        return;
+    }
+    if (data.servers.length === 0) {
+        alert('Please add at least one server');
+        return;
+    }
+    if (data.commands.length === 0) {
+        alert('Please enter at least one command');
+        return;
+    }
+    if (data.scheduleType === 'weekly' && data.daysOfWeek.length === 0) {
+        alert('Please select at least one day of the week');
+        return;
+    }
+
+    try {
+        if (data.id) {
+            await runtime.UpdateSchedule(data);
+        } else {
+            await runtime.CreateSchedule(data);
+        }
+        closeScheduleForm();
+        loadSchedules();
+    } catch (err) {
+        alert('Failed to save schedule: ' + err);
+    }
+}
+
+function editSchedule(id) {
+    showScheduleForm(id);
+}
+
+async function deleteSchedule(id) {
+    if (!confirm('Are you sure you want to delete this schedule?')) {
+        return;
+    }
+
+    try {
+        await runtime.DeleteSchedule(id);
+        loadSchedules();
+    } catch (err) {
+        alert('Failed to delete schedule: ' + err);
+    }
+}
+
+async function toggleSchedule(id, enabled) {
+    try {
+        await runtime.ToggleSchedule(id, enabled);
+        loadSchedules();
+    } catch (err) {
+        alert('Failed to toggle schedule: ' + err);
+    }
+}
+
+async function runScheduleNow(id) {
+    try {
+        const success = await runtime.RunScheduleNow(id);
+        if (success) {
+            showSection('execution');
+            setStatus('Running scheduled task...');
+        }
+    } catch (err) {
+        alert('Failed to run schedule: ' + err);
+    }
+}
+
+// Setup schedule event listeners
+function setupScheduleEventListeners() {
+    if (window.runtime) {
+        window.runtime.EventsOn('scheduleStarted', (data) => {
+            setStatus(`Schedule "${data.taskName}" started`);
+            showSection('execution');
+        });
+
+        window.runtime.EventsOn('scheduleSkipped', (data) => {
+            alert(`Schedule "${data.taskName}" skipped: ${data.reason}`);
+        });
+    }
+}
+
+// Initialize schedule listeners
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(setupScheduleEventListeners, 100);
+});
+
+// Expose schedule functions
+window.showScheduleForm = showScheduleForm;
+window.closeScheduleForm = closeScheduleForm;
+window.updateScheduleOptions = updateScheduleOptions;
+window.addScheduleServerRow = addScheduleServerRow;
+window.copyServersFromExecution = copyServersFromExecution;
+window.copyCommandsFromExecution = copyCommandsFromExecution;
+window.saveSchedule = saveSchedule;
+window.editSchedule = editSchedule;
+window.deleteSchedule = deleteSchedule;
+window.toggleSchedule = toggleSchedule;
+window.runScheduleNow = runScheduleNow;
