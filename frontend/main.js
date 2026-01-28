@@ -19,22 +19,24 @@ const elements = {
     resultsSection: document.getElementById('resultsSection'),
     resultsBody: document.getElementById('resultsBody'),
     summary: document.getElementById('summary'),
-    logSection: document.getElementById('logSection'),
+    logViewerModal: document.getElementById('logViewerModal'),
     logTitle: document.getElementById('logTitle'),
     logContent: document.getElementById('logContent'),
     statusText: document.getElementById('statusText'),
+    statusDot: document.getElementById('statusDot'),
     autoScroll: document.getElementById('autoScroll'),
-    combinedLogContent: document.getElementById('combinedLogContent')
+    combinedLogContent: document.getElementById('combinedLogContent'),
+    sectionTitle: document.getElementById('sectionTitle'),
+    connectionInfo: document.getElementById('connectionInfo')
 };
 
 // State
-let overlay = null;
 let liveLogs = [];
 let serverLogs = {};
 let currentServerTab = 'all';
 let knownServers = new Set();
-let logPanelVisible = false;
 let latestUpdateInfo = null;
+let currentSection = 'execution';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -70,9 +72,37 @@ async function loadVersion() {
     try {
         const version = await runtime.GetCurrentVersion();
         document.getElementById('versionInfo').textContent = `v${version}`;
+        const versionStatus = document.getElementById('versionStatus');
+        if (versionStatus) {
+            versionStatus.textContent = `v${version}`;
+        }
     } catch (err) {
         console.error('Failed to load version:', err);
     }
+}
+
+// ==================== Navigation ====================
+
+function showSection(section) {
+    currentSection = section;
+
+    // Update nav items
+    document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+        item.classList.toggle('active', item.dataset.section === section);
+    });
+
+    // Update section title
+    const titles = {
+        execution: 'Execution',
+        results: 'Results',
+        logs: 'Live Logs'
+    };
+    elements.sectionTitle.textContent = titles[section] || section;
+
+    // Show/hide sections
+    document.getElementById('executionSection').style.display = section === 'execution' ? 'flex' : 'none';
+    document.getElementById('resultsSection').style.display = section === 'results' ? 'flex' : 'none';
+    document.getElementById('logsSection').style.display = section === 'logs' ? 'flex' : 'none';
 }
 
 // ==================== Server Table Management ====================
@@ -107,7 +137,7 @@ function removeServerRow(btn) {
 
 function updateServerCount() {
     const servers = getServersFromTable();
-    elements.serverCount.textContent = `(${servers.length})`;
+    elements.serverCount.textContent = servers.length;
 }
 
 function getServersFromTable() {
@@ -161,7 +191,7 @@ function getCommandsFromTextarea() {
 
 function updateCommandCount() {
     const commands = getCommandsFromTextarea();
-    elements.commandCount.textContent = `(${commands.length})`;
+    elements.commandCount.textContent = commands.length;
 }
 
 // ==================== Settings Menu ====================
@@ -177,7 +207,7 @@ function closeSettingsMenu() {
 }
 
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.icon-dropdown')) {
+    if (!e.target.closest('.sidebar-footer')) {
         closeSettingsMenu();
     }
 });
@@ -272,18 +302,7 @@ async function restartApp() {
     }
 }
 
-// ==================== Log Panel ====================
-
-function toggleLogPanel() {
-    const logsPanel = document.getElementById('logsPanel');
-    logPanelVisible = !logPanelVisible;
-
-    if (logPanelVisible) {
-        logsPanel.classList.add('visible');
-    } else {
-        logsPanel.classList.remove('visible');
-    }
-}
+// ==================== Live Logs ====================
 
 function handleLog(data) {
     const { serverIP, hostname, line } = data;
@@ -392,7 +411,7 @@ function clearLiveLogs() {
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
-    const timeout = parseInt(elements.timeout.value) || 10;
+    const timeout = parseInt(elements.timeout.value) || 3;
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -423,12 +442,12 @@ async function startExecution() {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
             elements.progressSection.style.display = 'block';
-            elements.resultsSection.style.display = 'block';
             elements.progressFill.style.width = '0%';
             elements.progressText.textContent = '0 / 0';
             elements.currentServer.textContent = '';
             elements.summary.innerHTML = '';
             setStatus('Running...');
+            updateConnectionInfo(`Executing on ${servers.length} servers`);
         }
     } catch (err) {
         showError('Failed to start: ' + err);
@@ -440,6 +459,7 @@ async function stopExecution() {
         await runtime.StopExecution();
         setRunningState(false);
         setStatus('Stopped');
+        updateConnectionInfo('Execution stopped');
     } catch (err) {
         showError('Failed to stop: ' + err);
     }
@@ -456,6 +476,7 @@ function handleProgress(data) {
 
     if (status === 'connecting') {
         elements.currentServer.textContent = `Connecting to ${hostname} (${ip})...`;
+        updateConnectionInfo(`Connecting to ${hostname}`);
     } else if (status === 'success') {
         elements.currentServer.textContent = `${hostname}: Success`;
     } else if (status === 'failed') {
@@ -473,7 +494,7 @@ function handleResult(data) {
         <td class="${success ? 'status-success' : 'status-failed'}">${success ? 'Success' : 'Failed'}</td>
         <td>${(duration / 1000).toFixed(1)}s</td>
         <td>
-            ${success && logPath ? `<button onclick="viewLog('${escapeHtml(logPath)}', '${escapeHtml(hostname)}')">View Log</button>` :
+            ${success && logPath ? `<button class="btn-secondary" onclick="viewLog('${escapeHtml(logPath)}', '${escapeHtml(hostname)}')">View</button>` :
               error ? `<span title="${escapeHtml(error)}">Error</span>` : '-'}
         </td>
     `;
@@ -493,6 +514,10 @@ function handleCompleted(data) {
     `;
 
     setStatus(`Completed: ${success} success, ${fail} failed`);
+    updateConnectionInfo('No active connections');
+
+    // Auto switch to results section
+    showSection('results');
 }
 
 function handleError(message) {
@@ -506,24 +531,14 @@ async function viewLog(path, hostname) {
         const content = await runtime.ReadLogFile(path);
         elements.logTitle.textContent = hostname + '.log';
         elements.logContent.textContent = content;
-
-        overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        overlay.onclick = closeLogViewer;
-        document.body.appendChild(overlay);
-
-        elements.logSection.style.display = 'flex';
+        elements.logViewerModal.style.display = 'flex';
     } catch (err) {
         showError('Failed to read log: ' + err);
     }
 }
 
 function closeLogViewer() {
-    elements.logSection.style.display = 'none';
-    if (overlay) {
-        overlay.remove();
-        overlay = null;
-    }
+    elements.logViewerModal.style.display = 'none';
 }
 
 async function openLogsFolder() {
@@ -556,6 +571,11 @@ function setRunningState(running) {
     elements.password.disabled = running;
     elements.timeout.disabled = running;
 
+    // Update status dot
+    if (elements.statusDot) {
+        elements.statusDot.className = 'status-dot' + (running ? ' running' : '');
+    }
+
     // Disable server table inputs
     const serverInputs = elements.serversBody?.querySelectorAll('input, button') || [];
     serverInputs.forEach(el => el.disabled = running);
@@ -568,6 +588,12 @@ function setRunningState(running) {
 
 function setStatus(text) {
     elements.statusText.textContent = text;
+}
+
+function updateConnectionInfo(text) {
+    if (elements.connectionInfo) {
+        elements.connectionInfo.textContent = text;
+    }
 }
 
 function showError(message) {
@@ -583,6 +609,7 @@ function escapeHtml(text) {
 
 // ==================== Expose Functions ====================
 
+window.showSection = showSection;
 window.addServerRow = addServerRow;
 window.removeServerRow = removeServerRow;
 window.importCSV = importCSV;
@@ -592,7 +619,6 @@ window.stopExecution = stopExecution;
 window.viewLog = viewLog;
 window.closeLogViewer = closeLogViewer;
 window.openLogsFolder = openLogsFolder;
-window.toggleLogPanel = toggleLogPanel;
 window.switchServerTab = switchServerTab;
 window.clearLiveLogs = clearLiveLogs;
 window.checkForUpdates = checkForUpdates;

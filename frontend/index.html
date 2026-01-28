@@ -7,34 +7,225 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Cisco Automation Tool</h1>
-            <div class="header-icons">
-                <div class="icon-dropdown">
-                    <button class="icon-btn icon-btn-text" onclick="toggleSettingsMenu()" title="Settings">
-                        Menu
-                    </button>
-                    <div class="dropdown-menu" id="settingsMenu">
-                        <button onclick="checkForUpdates(); closeSettingsMenu();">Check for Updates</button>
-                        <div class="dropdown-divider"></div>
-                        <span class="dropdown-info" id="versionInfo">v1.0.0</span>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">Cisco Tool</span>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-section="execution" onclick="showSection('execution')">
+                    <span class="nav-icon">▶</span>
+                    <span class="nav-text">Execution</span>
+                </button>
+                <button class="nav-item" data-section="results" onclick="showSection('results')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Results</span>
+                </button>
+                <button class="nav-item" data-section="logs" onclick="showSection('logs')">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Live Logs</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="nav-item" onclick="openLogsFolder()">
+                    <span class="nav-icon">📁</span>
+                    <span class="nav-text">Open Folder</span>
+                </button>
+                <button class="nav-item" onclick="toggleSettingsMenu()">
+                    <span class="nav-icon">⚙</span>
+                    <span class="nav-text">Settings</span>
+                </button>
+                <div class="dropdown-menu" id="settingsMenu">
+                    <button onclick="checkForUpdates(); closeSettingsMenu();">Check for Updates</button>
+                    <div class="dropdown-divider"></div>
+                    <span class="dropdown-info" id="versionInfo">v1.0.0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Top Toolbar -->
+            <header class="toolbar">
+                <div class="toolbar-left">
+                    <h1 id="sectionTitle">Execution</h1>
+                </div>
+                <div class="toolbar-right">
+                    <div class="toolbar-status">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span id="statusText">Ready</span>
                     </div>
                 </div>
-                <button class="icon-btn icon-btn-text" onclick="toggleLogPanel()" title="Toggle Logs">
-                    Logs
-                </button>
-            </div>
-        </header>
+            </header>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Execution Section -->
+                <section class="content-section" id="executionSection">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Connection Settings</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" id="username" placeholder="SSH username">
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input type="password" id="password" placeholder="SSH password">
+                                </div>
+                                <div class="form-group form-group-small">
+                                    <label>Timeout <span class="help-icon" title="데이터 청크 간 대기 시간(초). 서버 응답이 느리면 값을 높이세요.">?</span></label>
+                                    <input type="number" id="timeout" min="1" max="60" value="3">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Target Servers</h2>
+                            <div class="panel-actions">
+                                <button type="button" class="btn-secondary" onclick="importCSV()">Import CSV</button>
+                                <button type="button" class="btn-secondary" onclick="addServerRow()">+ Add</button>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-container">
+                                <table class="data-table" id="serversTable">
+                                    <thead>
+                                        <tr>
+                                            <th>IP Address</th>
+                                            <th>Hostname</th>
+                                            <th style="width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="serversBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="item-count-bar">
+                                <span id="serverCount">0</span> servers configured
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Commands</h2>
+                            <span class="item-count"><span id="commandCount">0</span> commands</span>
+                        </div>
+                        <div class="panel-body">
+                            <textarea id="commandsInput" class="commands-textarea" placeholder="Enter commands (one per line)...
+Example:
+show version
+show ip int br
+show run"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button id="runBtn" class="btn-primary btn-large" onclick="startExecution()">
+                            <span class="btn-icon">▶</span> Run Execution
+                        </button>
+                        <button id="stopBtn" class="btn-danger btn-large" onclick="stopExecution()" disabled>
+                            <span class="btn-icon">■</span> Stop
+                        </button>
+                    </div>
+
+                    <!-- Progress Panel -->
+                    <div class="panel" id="progressSection" style="display: none;">
+                        <div class="panel-header">
+                            <h2>Progress</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span id="progressText">0 / 0</span>
+                                <span id="currentServer"></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results Section -->
+                <section class="content-section" id="resultsSection" style="display: none;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Execution Results</h2>
+                            <button class="btn-success" onclick="exportResults()">Export Excel</button>
+                        </div>
+                        <div class="panel-body">
+                            <div class="summary-bar" id="summary"></div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Hostname</th>
+                                            <th>IP Address</th>
+                                            <th>Status</th>
+                                            <th>Duration</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Live Logs Section -->
+                <section class="content-section" id="logsSection" style="display: none;">
+                    <div class="panel panel-full">
+                        <div class="panel-header">
+                            <h2>Live Logs</h2>
+                            <div class="panel-actions">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoScroll" checked>
+                                    Auto-scroll
+                                </label>
+                                <button class="btn-secondary" onclick="clearLiveLogs()">Clear</button>
+                            </div>
+                        </div>
+                        <div class="panel-body panel-body-logs">
+                            <div class="server-tabs" id="serverTabs">
+                                <button class="server-tab active" data-server="all" onclick="switchServerTab('all')">All</button>
+                            </div>
+                            <div class="logs-view">
+                                <pre class="log-content" id="combinedLogContent"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Status Bar -->
+            <footer class="status-bar">
+                <div class="status-left">
+                    <span id="connectionInfo">No active connections</span>
+                </div>
+                <div class="status-right">
+                    <span id="versionStatus"></span>
+                </div>
+            </footer>
+        </div>
 
         <!-- Update Modal -->
-        <div class="update-modal" id="updateModal" style="display: none;">
-            <div class="update-modal-content">
-                <div class="update-modal-header">
+        <div class="modal-overlay" id="updateModal" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
                     <h2>Update Available</h2>
                     <button class="close-btn" onclick="closeUpdateModal()">&times;</button>
                 </div>
-                <div class="update-modal-body">
+                <div class="modal-body">
                     <p id="updateVersionInfo"></p>
                     <div id="updateReleaseNotes" class="release-notes"></div>
                     <div id="updateProgress" class="update-progress" style="display: none;">
@@ -44,148 +235,27 @@
                         <p id="updateProgressText">Downloading...</p>
                     </div>
                 </div>
-                <div class="update-modal-footer">
-                    <button id="downloadUpdateBtn" class="primary" onclick="downloadUpdate()">Download & Install</button>
-                    <button id="restartBtn" class="primary" onclick="restartApp()" style="display: none;">Restart Now</button>
-                    <button onclick="closeUpdateModal()">Later</button>
+                <div class="modal-footer">
+                    <button id="downloadUpdateBtn" class="btn-primary" onclick="downloadUpdate()">Download & Install</button>
+                    <button id="restartBtn" class="btn-primary" onclick="restartApp()" style="display: none;">Restart Now</button>
+                    <button class="btn-secondary" onclick="closeUpdateModal()">Later</button>
                 </div>
             </div>
-        </div>
-
-        <div class="main-layout">
-            <!-- Left Panel - Main Content -->
-            <main class="main-panel">
-                <!-- Configuration Section -->
-                <section class="config-section">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="username" placeholder="SSH username">
-                        </div>
-                        <div class="form-group">
-                            <label>Password</label>
-                            <input type="password" id="password" placeholder="SSH password">
-                        </div>
-                        <div class="form-group form-group-small">
-                            <label>Timeout(s) <span class="help-icon" title="데이터 청크 간 대기 시간(초). 서버 응답이 느리면 값을 높이세요.">?</span></label>
-                            <input type="number" id="timeout" min="1" max="60" value="3">
-                        </div>
-                    </div>
-
-                    <!-- Servers Section -->
-                    <div class="input-section">
-                        <div class="section-header">
-                            <label>Servers <span class="item-count" id="serverCount">(0)</span></label>
-                            <div class="section-actions">
-                                <button type="button" onclick="importCSV()">Import CSV</button>
-                                <button type="button" onclick="addServerRow()">+ Add</button>
-                            </div>
-                        </div>
-                        <div class="servers-table-container">
-                            <table class="servers-table" id="serversTable">
-                                <thead>
-                                    <tr>
-                                        <th>IP Address</th>
-                                        <th>Hostname</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="serversBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Commands Section -->
-                    <div class="input-section">
-                        <div class="section-header">
-                            <label>Commands <span class="item-count" id="commandCount">(0)</span></label>
-                        </div>
-                        <textarea id="commandsInput" class="commands-textarea" placeholder="Enter commands (one per line)...
-Example:
-show version
-show ip int br
-show run"></textarea>
-                    </div>
-
-                    <div class="button-group">
-                        <button id="runBtn" class="primary" onclick="startExecution()">Run</button>
-                        <button id="stopBtn" class="danger" onclick="stopExecution()" disabled>Stop</button>
-                    </div>
-                </section>
-
-                <!-- Progress Section -->
-                <section class="progress-section" id="progressSection" style="display: none;">
-                    <h2>Progress</h2>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                    </div>
-                    <p class="progress-text" id="progressText">0 / 0</p>
-                    <p class="current-server" id="currentServer"></p>
-                </section>
-
-                <!-- Results Section -->
-                <section class="results-section" id="resultsSection" style="display: none;">
-                    <div class="results-header">
-                        <h2>Results</h2>
-                        <button class="export-btn" onclick="exportResults()">Export Excel</button>
-                    </div>
-                    <div class="summary" id="summary"></div>
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Hostname</th>
-                                <th>IP</th>
-                                <th>Status</th>
-                                <th>Duration</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsBody">
-                        </tbody>
-                    </table>
-                </section>
-            </main>
-
-            <!-- Right Panel - Live Logs -->
-            <aside class="logs-panel" id="logsPanel">
-                <div class="live-logs-header">
-                    <h2>Live Logs</h2>
-                    <div class="live-logs-controls">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="autoScroll" checked>
-                            Auto-scroll
-                        </label>
-                        <button onclick="clearLiveLogs()">Clear</button>
-                    </div>
-                </div>
-
-                <!-- Server Tabs -->
-                <div class="server-tabs" id="serverTabs">
-                    <button class="server-tab active" data-server="all" onclick="switchServerTab('all')">All</button>
-                </div>
-
-                <!-- Log Content -->
-                <div class="logs-tab-view">
-                    <pre class="live-log-content" id="combinedLogContent"></pre>
-                </div>
-            </aside>
         </div>
 
         <!-- Log Viewer Modal -->
-        <section class="log-section" id="logSection" style="display: none;">
-            <div class="log-header">
-                <h2>Log Viewer</h2>
-                <button onclick="closeLogViewer()">Close</button>
+        <div class="modal-overlay" id="logViewerModal" style="display: none;">
+            <div class="modal modal-large">
+                <div class="modal-header">
+                    <h2>Log Viewer</h2>
+                    <button class="close-btn" onclick="closeLogViewer()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h3 id="logTitle"></h3>
+                    <pre class="log-viewer-content" id="logContent"></pre>
+                </div>
             </div>
-            <h3 id="logTitle"></h3>
-            <pre class="log-content" id="logContent"></pre>
-        </section>
-
-        <footer>
-            <button onclick="openLogsFolder()">Open Logs Folder</button>
-            <span id="statusText">Ready</span>
-        </footer>
+        </div>
     </div>
 
     <script src="main.js"></script>
