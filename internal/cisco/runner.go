@@ -14,8 +14,10 @@ type Runner struct {
 	Commands       []string
 	Credentials    *Credentials
 	LogDir         string
-	MaxConcurrent  int // Maximum number of concurrent executions (always 1)
-	ChunkTimeout   int // Seconds to wait for data chunks
+	MaxConcurrent  int  // Maximum number of concurrent executions (always 1)
+	ChunkTimeout   int  // Seconds to wait for data chunks
+	EnableMode     bool // Whether to enter enable mode
+	DisablePaging  bool // Whether to disable paging (terminal length 0)
 	OnProgress     ProgressCallback
 	OnResult       ResultCallback
 	OnLog          LogCallback // Real-time log callback
@@ -30,7 +32,7 @@ type Runner struct {
 }
 
 // NewRunner creates a new Runner instance
-func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int) *Runner {
+func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int, enableMode, disablePaging bool) *Runner {
 	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
 	if chunkTimeout <= 0 {
 		chunkTimeout = 1
@@ -42,6 +44,8 @@ func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTim
 		LogDir:        logDir,
 		MaxConcurrent: 1, // Force sequential execution to avoid output truncation issues
 		ChunkTimeout:  chunkTimeout,
+		EnableMode:    enableMode,
+		DisablePaging: disablePaging,
 		results:       make([]ExecutionResult, 0, len(servers)),
 	}
 }
@@ -176,7 +180,7 @@ func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
 			}
 		}
 
-		output, err := ExecuteCommands(server, r.Credentials, r.Commands, r.ChunkTimeout, logCallback)
+		output, err := ExecuteCommands(server, r.Credentials, r.Commands, r.ChunkTimeout, r.EnableMode, r.DisablePaging, logCallback)
 		result.Duration = time.Since(startTime).Milliseconds()
 
 		if err != nil {

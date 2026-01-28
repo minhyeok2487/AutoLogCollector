@@ -107,7 +107,7 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 }
 
 // StartExecution begins the command execution
-func (a *App) StartExecution(username, password string, timeout int) bool {
+func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging bool) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -139,7 +139,7 @@ func (a *App) StartExecution(username, password string, timeout int) bool {
 		Password: password,
 	}
 
-	a.runner = cisco.NewRunner(a.servers, a.commands, creds, timeout)
+	a.runner = cisco.NewRunner(a.servers, a.commands, creds, timeout, enableMode, disablePaging)
 
 	a.runner.OnProgress = func(current, total int, server cisco.Server, status string) {
 		runtime.EventsEmit(a.ctx, "progress", map[string]interface{}{

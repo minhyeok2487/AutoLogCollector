@@ -6,6 +6,8 @@ const elements = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
     timeout: document.getElementById('timeout'),
+    enableMode: document.getElementById('enableMode'),
+    disablePaging: document.getElementById('disablePaging'),
     serversBody: document.getElementById('serversBody'),
     commandsInput: document.getElementById('commandsInput'),
     runBtn: document.getElementById('runBtn'),
@@ -411,6 +413,8 @@ async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
     const timeout = parseInt(elements.timeout.value) || 1;
+    const enableMode = elements.enableMode?.checked ?? true;
+    const disablePaging = elements.disablePaging?.checked ?? true;
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -436,7 +440,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, timeout);
+        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -569,6 +573,8 @@ function setRunningState(running) {
     elements.username.disabled = running;
     elements.password.disabled = running;
     elements.timeout.disabled = running;
+    if (elements.enableMode) elements.enableMode.disabled = running;
+    if (elements.disablePaging) elements.disablePaging.disabled = running;
 
     // Update status dot
     if (elements.statusDot) {

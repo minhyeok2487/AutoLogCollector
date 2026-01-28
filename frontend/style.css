@@ -304,6 +304,18 @@ body {
     gap: 20px;
 }
 
+.options-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--panel-border);
+}
+
+.options-row .checkbox-label {
+    color: var(--text-primary);
+}
+
 .form-group {
     flex: 1;
 }

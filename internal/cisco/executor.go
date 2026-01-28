@@ -48,7 +48,7 @@ func newSSHConfig(creds *Credentials) *ssh.ClientConfig {
 }
 
 // ExecuteCommands connects to server and executes commands with real-time log callback
-func ExecuteCommands(server Server, creds *Credentials, commands []string, chunkTimeoutSec int, onLog func(line string)) (string, error) {
+func ExecuteCommands(server Server, creds *Credentials, commands []string, chunkTimeoutSec int, enableMode, disablePaging bool, onLog func(line string)) (string, error) {
 	config := newSSHConfig(creds)
 
 	// Connect to SSH
@@ -200,22 +200,26 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, chunk
 	initialOutput := readOutput(3*time.Second, false)
 	output.WriteString(initialOutput)
 
-	// Enter enable mode
-	sendCommand("enable")
-	time.Sleep(500 * time.Millisecond)
-	enableOutput := readOutput(2*time.Second, false)
-	output.WriteString(enableOutput)
+	// Enter enable mode (optional)
+	if enableMode {
+		sendCommand("enable")
+		time.Sleep(500 * time.Millisecond)
+		enableOutput := readOutput(2*time.Second, false)
+		output.WriteString(enableOutput)
 
-	// Send enable password (same as login password)
-	sendCommand(creds.Password)
-	time.Sleep(500 * time.Millisecond)
-	passwordOutput := readOutput(2*time.Second, false)
-	output.WriteString(passwordOutput)
+		// Send enable password (same as login password)
+		sendCommand(creds.Password)
+		time.Sleep(500 * time.Millisecond)
+		passwordOutput := readOutput(2*time.Second, false)
+		output.WriteString(passwordOutput)
+	}
 
-	// Disable paging to get full output
-	sendCommand("terminal length 0")
-	time.Sleep(300 * time.Millisecond)
-	readOutput(2*time.Second, false)
+	// Disable paging to get full output (optional)
+	if disablePaging {
+		sendCommand("terminal length 0")
+		time.Sleep(300 * time.Millisecond)
+		readOutput(2*time.Second, false)
+	}
 
 	// Execute commands - wait for timeout (prompt detection disabled for reliability)
 	for _, cmd := range commands {
@@ -225,11 +229,13 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, chunk
 		output.WriteString(cmdOutput)
 	}
 
-	// Restore terminal length to default
-	sendCommand("terminal length 24")
-	time.Sleep(300 * time.Millisecond)
-	termOutput := readOutput(2*time.Second, false)
-	output.WriteString(termOutput)
+	// Restore terminal length to default (only if paging was disabled)
+	if disablePaging {
+		sendCommand("terminal length 24")
+		time.Sleep(300 * time.Millisecond)
+		termOutput := readOutput(2*time.Second, false)
+		output.WriteString(termOutput)
+	}
 
 	// Exit gracefully
 	sendCommand("exit")
