@@ -777,13 +777,15 @@ button:disabled {
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
-    max-height: 80vh;
-    overflow: hidden;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
 .modal-large {
     max-width: 900px;
+    max-height: 90vh;
 }
 
 .modal-header {
@@ -817,7 +819,7 @@ button:disabled {
 
 .modal-body {
     padding: 24px;
-    max-height: 400px;
+    flex: 1;
     overflow-y: auto;
 }
 
@@ -1175,4 +1177,10 @@ button:disabled {
 .status-badge.disabled {
     background: rgba(90, 106, 126, 0.1);
     color: var(--text-secondary);
+}
+
+.info-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
 }

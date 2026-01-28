@@ -230,14 +230,38 @@ show run"></textarea>
 
                 <!-- Schedule Section -->
                 <section class="content-section" id="scheduleSection" style="display: none;">
+                    <!-- Credentials Panel for Schedule -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Session Credentials</h2>
+                            <span class="credential-status" id="credentialStatus">
+                                <span class="status-indicator"></span>
+                                No credentials
+                            </span>
+                        </div>
+                        <div class="panel-body">
+                            <p class="info-text">Enter credentials to enable scheduled task execution. These are stored in memory only.</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" id="scheduleUsername" placeholder="SSH username" onchange="syncScheduleCredentials()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input type="password" id="schedulePassword" placeholder="SSH password" onchange="syncScheduleCredentials()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Enable Password</label>
+                                    <input type="password" id="scheduleEnablePassword" placeholder="Optional" onchange="syncScheduleCredentials()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="panel">
                         <div class="panel-header">
                             <h2>Scheduled Tasks</h2>
                             <div class="panel-actions">
-                                <span class="credential-status" id="credentialStatus">
-                                    <span class="status-indicator inactive"></span>
-                                    No credentials
-                                </span>
                                 <button class="btn-primary" onclick="showScheduleForm()">+ New Schedule</button>
                             </div>
                         </div>

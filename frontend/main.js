@@ -679,7 +679,19 @@ window.toggleEnablePasswordInput = toggleEnablePasswordInput;
 
 let schedules = [];
 
-// Update credentials when user types in username/password fields
+// Sync credentials from Schedule section
+function syncScheduleCredentials() {
+    const username = document.getElementById('scheduleUsername')?.value?.trim() || '';
+    const password = document.getElementById('schedulePassword')?.value || '';
+    const enablePwd = document.getElementById('scheduleEnablePassword')?.value || '';
+
+    if (username && password) {
+        runtime.SetCredentials(username, password, enablePwd);
+    }
+    updateCredentialStatus();
+}
+
+// Update credentials when user types in Execution section
 function setupCredentialSync() {
     const usernameInput = elements.username;
     const passwordInput = elements.password;
@@ -693,6 +705,13 @@ function setupCredentialSync() {
 
         if (username && password) {
             runtime.SetCredentials(username, password, enablePwd);
+            // Also update Schedule section fields
+            const scheduleUser = document.getElementById('scheduleUsername');
+            const schedulePass = document.getElementById('schedulePassword');
+            const scheduleEnablePwd = document.getElementById('scheduleEnablePassword');
+            if (scheduleUser) scheduleUser.value = username;
+            if (schedulePass) schedulePass.value = password;
+            if (scheduleEnablePwd) scheduleEnablePwd.value = enablePwd;
         }
         updateCredentialStatus();
     };
@@ -1051,3 +1070,4 @@ window.editSchedule = editSchedule;
 window.deleteSchedule = deleteSchedule;
 window.toggleSchedule = toggleSchedule;
 window.runScheduleNow = runScheduleNow;
+window.syncScheduleCredentials = syncScheduleCredentials;
