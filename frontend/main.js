@@ -436,7 +436,7 @@ async function startExecution() {
     const password = elements.password.value;
     const timeout = parseInt(elements.timeout.value) || 1;
     const enableMode = elements.enableMode?.checked ?? false;
-    const disablePaging = elements.disablePaging?.checked ?? false;
+    const disablePaging = elements.disablePaging?.checked ?? true;
 
     // Get enable password (use login password if "same" is checked)
     let enablePwd = '';
