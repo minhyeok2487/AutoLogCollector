@@ -33,7 +33,7 @@ type Runner struct {
 func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int) *Runner {
 	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
 	if chunkTimeout <= 0 {
-		chunkTimeout = 3
+		chunkTimeout = 1
 	}
 	return &Runner{
 		Servers:       servers,

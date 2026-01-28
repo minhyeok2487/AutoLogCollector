@@ -131,7 +131,7 @@ func (a *App) StartExecution(username, password string, timeout int) bool {
 	}
 
 	if timeout <= 0 {
-		timeout = 3
+		timeout = 1
 	}
 
 	creds := &cisco.Credentials{

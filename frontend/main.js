@@ -411,7 +411,7 @@ function clearLiveLogs() {
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
-    const timeout = parseInt(elements.timeout.value) || 3;
+    const timeout = parseInt(elements.timeout.value) || 1;
 
     if (!username || !password) {
         showError('Please enter username and password');
