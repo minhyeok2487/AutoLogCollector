@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 )
+
+// Cisco prompt pattern: hostname# or hostname> or hostname(config)#
+var promptPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+(\([^)]+\))?[#>]\s*$`)
 
 // newSSHConfig creates SSH client config with legacy algorithm support for older Cisco devices
 func newSSHConfig(creds *Credentials) *ssh.ClientConfig {
@@ -136,8 +140,17 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 		}
 	}()
 
-	// Helper to read with timeout
-	readOutput := func(timeout time.Duration) string {
+	// Helper to check if line is a Cisco prompt
+	isPrompt := func(line string) bool {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			return false
+		}
+		return promptPattern.MatchString(line)
+	}
+
+	// Helper to read with timeout and prompt detection
+	readOutput := func(timeout time.Duration, detectPrompt bool) string {
 		var result strings.Builder
 		timer := time.NewTimer(timeout)
 		defer timer.Stop()
@@ -146,7 +159,27 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 			select {
 			case data := <-outputChan:
 				result.WriteString(data)
-				timer.Reset(200 * time.Millisecond)
+
+				// Check for prompt if detection is enabled
+				if detectPrompt {
+					content := result.String()
+					// Get the last non-empty line
+					lines := strings.Split(content, "\n")
+					for i := len(lines) - 1; i >= 0; i-- {
+						line := strings.TrimRight(lines[i], "\r\n ")
+						if line != "" {
+							if isPrompt(line) {
+								// Prompt detected - wait a bit for any trailing data
+								time.Sleep(100 * time.Millisecond)
+								return result.String()
+							}
+							break
+						}
+					}
+				}
+
+				// Reset timer - wait for more data
+				timer.Reset(5 * time.Second)
 			case <-timer.C:
 				return result.String()
 			case <-doneChan:
@@ -161,38 +194,39 @@ func ExecuteCommands(server Server, creds *Credentials, commands []string, onLog
 	}
 
 	// Wait for initial prompt
-	initialOutput := readOutput(2 * time.Second)
+	initialOutput := readOutput(3*time.Second, false)
 	output.WriteString(initialOutput)
 
 	// Enter enable mode
 	sendCommand("enable")
 	time.Sleep(500 * time.Millisecond)
-	enableOutput := readOutput(1 * time.Second)
+	enableOutput := readOutput(2*time.Second, false)
 	output.WriteString(enableOutput)
 
 	// Send enable password (same as login password)
 	sendCommand(creds.Password)
 	time.Sleep(500 * time.Millisecond)
-	passwordOutput := readOutput(1 * time.Second)
+	passwordOutput := readOutput(2*time.Second, false)
 	output.WriteString(passwordOutput)
 
 	// Disable paging to get full output
 	sendCommand("terminal length 0")
 	time.Sleep(300 * time.Millisecond)
-	readOutput(1 * time.Second)
+	readOutput(2*time.Second, false)
 
-	// Execute commands
+	// Execute commands with prompt detection
 	for _, cmd := range commands {
 		sendCommand(cmd)
 		time.Sleep(300 * time.Millisecond)
-		cmdOutput := readOutput(30 * time.Second)
+		// Use prompt detection - will return when prompt is seen, or timeout after 2 min
+		cmdOutput := readOutput(120*time.Second, true)
 		output.WriteString(cmdOutput)
 	}
 
 	// Restore terminal length to default
 	sendCommand("terminal length 24")
 	time.Sleep(300 * time.Millisecond)
-	readOutput(1 * time.Second)
+	readOutput(2*time.Second, false)
 
 	// Exit gracefully
 	sendCommand("exit")

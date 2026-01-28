@@ -31,9 +31,8 @@ type Runner struct {
 // NewRunner creates a new Runner instance
 func NewRunner(servers []Server, commands []string, creds *Credentials, maxConcurrent int) *Runner {
 	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
-	if maxConcurrent <= 0 {
-		maxConcurrent = 1
-	}
+	// Force sequential execution to avoid output truncation issues
+	maxConcurrent = 1
 	return &Runner{
 		Servers:       servers,
 		Commands:      commands,

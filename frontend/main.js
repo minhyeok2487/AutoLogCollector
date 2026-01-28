@@ -5,7 +5,6 @@ const runtime = window.go?.main?.App;
 const elements = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
-    concurrent: document.getElementById('concurrent'),
     serversBody: document.getElementById('serversBody'),
     commandsInput: document.getElementById('commandsInput'),
     runBtn: document.getElementById('runBtn'),
@@ -392,7 +391,6 @@ function clearLiveLogs() {
 async function startExecution() {
     const username = elements.username.value.trim();
     const password = elements.password.value;
-    const concurrent = parseInt(elements.concurrent.value) || 5;
 
     if (!username || !password) {
         showError('Please enter username and password');
@@ -418,7 +416,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, concurrent);
+        const success = await runtime.StartExecution(username, password, 1);
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -428,7 +426,7 @@ async function startExecution() {
             elements.progressText.textContent = '0 / 0';
             elements.currentServer.textContent = '';
             elements.summary.innerHTML = '';
-            setStatus(`Running (${concurrent} parallel)...`);
+            setStatus('Running...');
         }
     } catch (err) {
         showError('Failed to start: ' + err);
@@ -554,7 +552,6 @@ function setRunningState(running) {
     elements.stopBtn.disabled = !running;
     elements.username.disabled = running;
     elements.password.disabled = running;
-    elements.concurrent.disabled = running;
 
     // Disable server table inputs
     const serverInputs = elements.serversBody?.querySelectorAll('input, button') || [];
