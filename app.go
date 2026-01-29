@@ -23,7 +23,7 @@ import (
 // GitHub repository settings for auto-update
 const (
 	GitHubOwner = "minhyeok2487"
-	GitHubRepo  = "cisco-plink"
+	GitHubRepo  = "AutoLogCollector"
 )
 
 // App struct
