@@ -124,7 +124,7 @@ func (u *Updater) DownloadUpdate(url string, onProgress func(downloaded, total i
 
 	// Create temp file
 	tempDir := os.TempDir()
-	tempFile := filepath.Join(tempDir, "cisco-tool-update.exe")
+	tempFile := filepath.Join(tempDir, "autologcollector-update.exe")
 
 	out, err := os.Create(tempFile)
 	if err != nil {

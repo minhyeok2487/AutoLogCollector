@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cisco Automation Tool</title>
+    <title>AutoLogCollector</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -285,6 +285,66 @@
             font-size: 13px;
         }
 
+        /* Install Notice */
+        .install-notice {
+            background: var(--bg-card);
+            border: 1px solid #f0a020;
+            border-radius: 12px;
+            padding: 28px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .notice-icon {
+            font-size: 32px;
+            color: #f0a020;
+            flex-shrink: 0;
+        }
+
+        .notice-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .notice-content p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .notice-steps {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(240, 160, 32, 0.1);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .step-num {
+            background: #f0a020;
+            color: var(--bg);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
         @media (max-width: 600px) {
             .hero h1 { font-size: 32px; }
             .hero p { font-size: 16px; }
@@ -295,9 +355,10 @@
 </head>
 <body>
     <nav>
-        <div class="nav-brand">Cisco Automation Tool</div>
+        <div class="nav-brand">AutoLogCollector</div>
         <div class="nav-links">
             <a href="#features">Features</a>
+            <a href="#install">Install</a>
             <a href="#license">License</a>
             <a href="#releases">Releases</a>
         </div>
@@ -305,7 +366,7 @@
 
     <div class="hero">
         <span class="hero-badge">Freeware</span>
-        <h1>Cisco <span>Automation</span> Tool</h1>
+        <h1>AutoLog<span>Collector</span></h1>
         <p>Cisco 네트워크 장비 SSH 자동화 도구. 다수의 장비에 SSH 접속하여 명령어를 일괄 실행하고 결과를 수집합니다.</p>
         <div class="hero-actions">
             <a href="#" class="btn btn-primary" id="downloadBtn">Download for Windows</a>
@@ -351,6 +412,22 @@
         </div>
     </section>
 
+    <section id="install">
+        <h2 class="section-title">Installation</h2>
+        <p class="section-desc">설치 시 참고사항</p>
+        <div class="install-notice">
+            <div class="notice-icon">&#9888;</div>
+            <div class="notice-content">
+                <h3>Windows SmartScreen 안내</h3>
+                <p>처음 실행 시 "Windows의 PC 보호" 경고가 나타날 수 있습니다. 이는 코드 서명 인증서가 없는 무료 소프트웨어에서 정상적으로 발생하는 현상입니다.</p>
+                <div class="notice-steps">
+                    <div class="step"><span class="step-num">1</span> "추가 정보" 클릭</div>
+                    <div class="step"><span class="step-num">2</span> "실행" 버튼 클릭</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="license">
         <h2 class="section-title">License</h2>
         <p class="section-desc">누구나 자유롭게 사용할 수 있습니다.</p>
@@ -369,7 +446,7 @@
     </section>
 
     <footer>
-        <p>Developed by 이민혁 &mdash; Cisco Automation Tool</p>
+        <p>Developed by 이민혁 &mdash; AutoLogCollector</p>
     </footer>
 
     <script>

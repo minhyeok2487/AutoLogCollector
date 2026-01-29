@@ -1,20 +1,20 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "cisco-tool",
-  "outputfilename": "cisco-tool-gui",
+  "name": "autologcollector",
+  "outputfilename": "AutoLogCollector",
   "frontend:install": "",
   "frontend:build": "",
   "frontend:dev:watcher": "",
   "frontend:dev:serverUrl": "",
   "author": {
-    "name": "Cisco Automation Tool",
+    "name": "AutoLogCollector",
     "email": ""
   },
   "info": {
-    "companyName": "Cisco Automation",
-    "productName": "Cisco Tool GUI",
+    "companyName": "AutoLogCollector",
+    "productName": "AutoLogCollector",
     "productVersion": "1.0.0",
     "copyright": "2024",
-    "comments": "Cisco Device Automation Tool with GUI"
+    "comments": "Network Device Log Collector"
   }
 }

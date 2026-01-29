@@ -25,12 +25,12 @@ jobs:
       - name: Rename binary
         run: |
           $tag = "${{ github.ref_name }}"
-          Copy-Item "build\bin\cisco-tool-gui.exe" "cisco-tool-windows-${tag}.exe"
+          Copy-Item "build\bin\AutoLogCollector.exe" "AutoLogCollector-windows-${tag}.exe"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: cisco-tool-windows-*.exe
+          files: AutoLogCollector-windows-*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
