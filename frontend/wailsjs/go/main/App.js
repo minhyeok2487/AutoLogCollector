@@ -22,6 +22,10 @@ export function ExportResults() {
   return window['go']['main']['App']['ExportResults']();
 }
 
+export function ExportServersToCSV(arg1) {
+  return window['go']['main']['App']['ExportServersToCSV'](arg1);
+}
+
 export function GetCurrentLogDir() {
   return window['go']['main']['App']['GetCurrentLogDir']();
 }
@@ -46,6 +50,10 @@ export function IsRunning() {
   return window['go']['main']['App']['IsRunning']();
 }
 
+export function LoadServerList() {
+  return window['go']['main']['App']['LoadServerList']();
+}
+
 export function OpenLogsFolder() {
   return window['go']['main']['App']['OpenLogsFolder']();
 }
@@ -60,6 +68,10 @@ export function RestartApp() {
 
 export function RunScheduleNow(arg1) {
   return window['go']['main']['App']['RunScheduleNow'](arg1);
+}
+
+export function SaveServerList(arg1) {
+  return window['go']['main']['App']['SaveServerList'](arg1);
 }
 
 export function SetCommands(arg1) {

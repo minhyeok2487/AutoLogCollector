@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"cisco-plink/internal/cisco"
 	"cisco-plink/internal/config"
+	appCrypto "cisco-plink/internal/crypto"
 	"cisco-plink/internal/scheduler"
 	"cisco-plink/internal/updater"
 
@@ -137,6 +139,109 @@ func (a *App) SetCommands(commands []string) {
 			a.commands = append(a.commands, cmd)
 		}
 	}
+}
+
+// SaveServerList saves the current server list to config/servers.json (encrypted)
+func (a *App) SaveServerList(servers []map[string]string) bool {
+	key, err := appCrypto.LoadOrGenerateKey()
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to load encryption key: "+err.Error())
+		return false
+	}
+
+	serverList := make([]cisco.Server, 0, len(servers))
+	for _, s := range servers {
+		ip := s["ip"]
+		if ip == "" {
+			continue
+		}
+		hostname := s["hostname"]
+		if hostname == "" {
+			hostname = ip
+		}
+		srv := cisco.Server{
+			IP:       ip,
+			Hostname: hostname,
+		}
+		// Encrypt per-server credentials
+		if s["username"] != "" {
+			srv.Username = s["username"]
+			encPwd, encEnPwd, err := appCrypto.EncryptFields(s["password"], s["enablePassword"], key)
+			if err == nil {
+				srv.Password = encPwd
+				srv.EnablePassword = encEnPwd
+			}
+		}
+		serverList = append(serverList, srv)
+	}
+
+	data, err := json.MarshalIndent(serverList, "", "  ")
+	if err != nil {
+		return false
+	}
+
+	if err := os.MkdirAll("config", 0755); err != nil {
+		return false
+	}
+	return os.WriteFile(filepath.Join("config", "servers.json"), data, 0644) == nil
+}
+
+// LoadServerList loads saved server list from config/servers.json (decrypted)
+func (a *App) LoadServerList() []map[string]string {
+	data, err := os.ReadFile(filepath.Join("config", "servers.json"))
+	if err != nil {
+		return nil
+	}
+
+	var servers []cisco.Server
+	if err := json.Unmarshal(data, &servers); err != nil {
+		return nil
+	}
+
+	key, _ := appCrypto.LoadOrGenerateKey()
+
+	result := make([]map[string]string, len(servers))
+	for i, s := range servers {
+		// Decrypt per-server credentials
+		if key != nil && s.Password != "" {
+			s.Password, s.EnablePassword = appCrypto.DecryptFields(s.Password, s.EnablePassword, key)
+		}
+		result[i] = map[string]string{
+			"ip":             s.IP,
+			"hostname":       s.Hostname,
+			"username":       s.Username,
+			"password":       s.Password,
+			"enablePassword": s.EnablePassword,
+		}
+	}
+	return result
+}
+
+// ExportServersToCSV exports server list to a CSV file
+func (a *App) ExportServersToCSV(servers []map[string]string) bool {
+	file, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Servers to CSV",
+		DefaultFilename: "servers.csv",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "CSV Files (*.csv)", Pattern: "*.csv"},
+		},
+	})
+	if err != nil || file == "" {
+		return false
+	}
+
+	var lines []string
+	lines = append(lines, "ip,hostname")
+	for _, s := range servers {
+		ip := s["ip"]
+		hostname := s["hostname"]
+		if ip != "" {
+			lines = append(lines, ip+","+hostname)
+		}
+	}
+
+	content := strings.Join(lines, "\n") + "\n"
+	return os.WriteFile(file, []byte(content), 0644) == nil
 }
 
 // ImportServersFromCSV opens file dialog and returns parsed servers

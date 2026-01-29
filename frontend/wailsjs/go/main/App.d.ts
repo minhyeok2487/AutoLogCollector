@@ -12,6 +12,8 @@ export function DownloadAndInstallUpdate(arg1:string):Promise<boolean>;
 
 export function ExportResults():Promise<string>;
 
+export function ExportServersToCSV(arg1:Array<Record<string, string>>):Promise<boolean>;
+
 export function GetCurrentLogDir():Promise<string>;
 
 export function GetCurrentVersion():Promise<string>;
@@ -24,6 +26,8 @@ export function ImportServersFromCSV():Promise<Array<Record<string, string>>>;
 
 export function IsRunning():Promise<boolean>;
 
+export function LoadServerList():Promise<Array<Record<string, string>>>;
+
 export function OpenLogsFolder():Promise<void>;
 
 export function ReadLogFile(arg1:string):Promise<string>;
@@ -31,6 +35,8 @@ export function ReadLogFile(arg1:string):Promise<string>;
 export function RestartApp():Promise<void>;
 
 export function RunScheduleNow(arg1:string):Promise<boolean>;
+
+export function SaveServerList(arg1:Array<Record<string, string>>):Promise<boolean>;
 
 export function SetCommands(arg1:Array<string>):Promise<void>;
 

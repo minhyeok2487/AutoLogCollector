@@ -138,10 +138,17 @@ function addServerRow(ip = '', hostname = '', creds = null) {
     tbody.appendChild(row);
     updateServerCount();
 
+    // Auto-save on input change
+    row.querySelectorAll('input[type="text"]').forEach(input => {
+        input.addEventListener('change', autoSaveServerList);
+    });
+
     // Focus on the IP input of the new row
     const ipInput = row.querySelector('input');
     if (ipInput && !ip) {
         ipInput.focus();
+    } else {
+        autoSaveServerList();
     }
 }
 
@@ -150,6 +157,7 @@ function removeServerRow(btn) {
     if (row) {
         row.remove();
         updateServerCount();
+        autoSaveServerList();
     }
 }
 
@@ -196,9 +204,58 @@ async function importCSV() {
             servers.forEach(server => {
                 addServerRow(server.ip, server.hostname);
             });
+            autoSaveServerList();
         }
     } catch (err) {
         showError('Failed to import CSV: ' + err);
+    }
+}
+
+// Export CSV file
+async function exportCSV() {
+    try {
+        const servers = getServersFromTable();
+        if (servers.length === 0) {
+            showError('No servers to export');
+            return;
+        }
+        await runtime.ExportServersToCSV(servers);
+    } catch (err) {
+        showError('Failed to export CSV: ' + err);
+    }
+}
+
+// Auto-save server list to config/servers.json
+let saveTimer = null;
+function autoSaveServerList() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+        const servers = getServersFromTable();
+        try {
+            await runtime.SaveServerList(servers);
+        } catch (err) {
+            console.error('Failed to auto-save servers:', err);
+        }
+    }, 500);
+}
+
+// Auto-load server list on startup
+async function loadSavedServerList() {
+    try {
+        const servers = await runtime.LoadServerList();
+        if (servers && servers.length > 0) {
+            clearServersTable();
+            servers.forEach(server => {
+                const creds = (server.username) ? {
+                    username: server.username,
+                    password: server.password || '',
+                    enablePassword: server.enablePassword || ''
+                } : null;
+                addServerRow(server.ip, server.hostname, creds);
+            });
+        }
+    } catch (err) {
+        console.error('Failed to load saved servers:', err);
     }
 }
 
@@ -673,6 +730,7 @@ window.showSection = showSection;
 window.addServerRow = addServerRow;
 window.removeServerRow = removeServerRow;
 window.importCSV = importCSV;
+window.exportCSV = exportCSV;
 window.updateServerCount = updateServerCount;
 window.startExecution = startExecution;
 window.stopExecution = stopExecution;
@@ -1045,9 +1103,10 @@ function setupScheduleEventListeners() {
     }
 }
 
-// Initialize schedule listeners
+// Initialize schedule listeners and load saved servers
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(setupScheduleEventListeners, 100);
+    setTimeout(loadSavedServerList, 200);
 });
 
 // Expose schedule functions
@@ -1102,6 +1161,7 @@ function saveServerCred() {
     }
 
     closeServerCredModal();
+    autoSaveServerList();
 }
 
 function clearServerCred() {
@@ -1117,6 +1177,7 @@ function clearServerCred() {
     }
 
     closeServerCredModal();
+    autoSaveServerList();
 }
 
 window.openServerCredModal = openServerCredModal;
