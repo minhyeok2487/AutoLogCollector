@@ -244,6 +244,42 @@ func (a *App) ExportServersToCSV(servers []map[string]string) bool {
 	return os.WriteFile(file, []byte(content), 0644) == nil
 }
 
+// ImportCommandsFromTxt opens file dialog and returns commands as text
+func (a *App) ImportCommandsFromTxt() string {
+	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Commands from TXT",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil || file == "" {
+		return ""
+	}
+
+	data, err := os.ReadFile(file)
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to read file: "+err.Error())
+		return ""
+	}
+	return string(data)
+}
+
+// ExportCommandsToTxt saves commands to a TXT file
+func (a *App) ExportCommandsToTxt(commands string) bool {
+	file, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Commands to TXT",
+		DefaultFilename: "commands.txt",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"},
+		},
+	})
+	if err != nil || file == "" {
+		return false
+	}
+	return os.WriteFile(file, []byte(commands), 0644) == nil
+}
+
 // ImportServersFromCSV opens file dialog and returns parsed servers
 func (a *App) ImportServersFromCSV() []map[string]string {
 	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{

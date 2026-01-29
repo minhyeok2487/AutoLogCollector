@@ -146,7 +146,11 @@
                     <div class="panel">
                         <div class="panel-header">
                             <h2>Commands</h2>
-                            <span class="item-count"><span id="commandCount">0</span> commands</span>
+                            <div class="panel-actions">
+                                <button type="button" class="btn-secondary" onclick="importCommandsTxt()">Import TXT</button>
+                                <button type="button" class="btn-secondary" onclick="exportCommandsTxt()">Export TXT</button>
+                                <span class="item-count"><span id="commandCount">0</span> commands</span>
+                            </div>
                         </div>
                         <div class="panel-body">
                             <textarea id="commandsInput" class="commands-textarea" placeholder="Enter commands (one per line)...

@@ -10,6 +10,8 @@ export function DeleteSchedule(arg1:string):Promise<boolean>;
 
 export function DownloadAndInstallUpdate(arg1:string):Promise<boolean>;
 
+export function ExportCommandsToTxt(arg1:string):Promise<boolean>;
+
 export function ExportResults():Promise<string>;
 
 export function ExportServersToCSV(arg1:Array<Record<string, string>>):Promise<boolean>;
@@ -21,6 +23,8 @@ export function GetCurrentVersion():Promise<string>;
 export function GetLogFiles():Promise<Array<Record<string, string>>>;
 
 export function GetSchedules():Promise<Array<Record<string, any>>>;
+
+export function ImportCommandsFromTxt():Promise<string>;
 
 export function ImportServersFromCSV():Promise<Array<Record<string, string>>>;
 

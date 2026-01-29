@@ -261,6 +261,31 @@ async function loadSavedServerList() {
 
 // ==================== Commands Management ====================
 
+async function importCommandsTxt() {
+    try {
+        const text = await runtime.ImportCommandsFromTxt();
+        if (text) {
+            elements.commandsInput.value = text;
+            updateCommandCount();
+        }
+    } catch (err) {
+        showError('Failed to import commands: ' + err);
+    }
+}
+
+async function exportCommandsTxt() {
+    try {
+        const text = elements.commandsInput?.value || '';
+        if (!text.trim()) {
+            showError('No commands to export');
+            return;
+        }
+        await runtime.ExportCommandsToTxt(text);
+    } catch (err) {
+        showError('Failed to export commands: ' + err);
+    }
+}
+
 function getCommandsFromTextarea() {
     const text = elements.commandsInput?.value || '';
     return text.split('\n')
@@ -731,6 +756,8 @@ window.addServerRow = addServerRow;
 window.removeServerRow = removeServerRow;
 window.importCSV = importCSV;
 window.exportCSV = exportCSV;
+window.importCommandsTxt = importCommandsTxt;
+window.exportCommandsTxt = exportCommandsTxt;
 window.updateServerCount = updateServerCount;
 window.startExecution = startExecution;
 window.stopExecution = stopExecution;

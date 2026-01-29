@@ -18,6 +18,10 @@ export function DownloadAndInstallUpdate(arg1) {
   return window['go']['main']['App']['DownloadAndInstallUpdate'](arg1);
 }
 
+export function ExportCommandsToTxt(arg1) {
+  return window['go']['main']['App']['ExportCommandsToTxt'](arg1);
+}
+
 export function ExportResults() {
   return window['go']['main']['App']['ExportResults']();
 }
@@ -40,6 +44,10 @@ export function GetLogFiles() {
 
 export function GetSchedules() {
   return window['go']['main']['App']['GetSchedules']();
+}
+
+export function ImportCommandsFromTxt() {
+  return window['go']['main']['App']['ImportCommandsFromTxt']();
 }
 
 export function ImportServersFromCSV() {
