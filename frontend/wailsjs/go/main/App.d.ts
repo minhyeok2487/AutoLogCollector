@@ -4,6 +4,8 @@ import {updater} from '../models';
 
 export function CheckForUpdates():Promise<updater.UpdateInfo>;
 
+export function ClearQueue():Promise<void>;
+
 export function CreateSchedule(arg1:Record<string, any>):Promise<string>;
 
 export function DeleteSchedule(arg1:string):Promise<boolean>;
@@ -21,6 +23,8 @@ export function GetCurrentLogDir():Promise<string>;
 export function GetCurrentVersion():Promise<string>;
 
 export function GetLogFiles():Promise<Array<Record<string, string>>>;
+
+export function GetQueue():Promise<Array<Record<string, any>>>;
 
 export function GetSchedules():Promise<Array<Record<string, any>>>;
 

@@ -1177,6 +1177,16 @@ function setupScheduleEventListeners() {
         window.runtime.EventsOn('scheduleSkipped', (data) => {
             showToast(`Schedule "${data.taskName}" skipped: ${data.reason}`, 'warning');
         });
+
+        window.runtime.EventsOn('scheduleQueued', (data) => {
+            const name = data.taskName || (data.isManual ? 'Manual execution' : 'Task');
+            showToast(`${name} queued (position: ${data.position})`, 'info');
+        });
+
+        window.runtime.EventsOn('queueProcessing', (data) => {
+            const name = data.scheduleName || 'Queued task';
+            showToast(`Starting queued task: ${name} (${data.remaining} remaining)`, 'info');
+        });
     }
 }
 

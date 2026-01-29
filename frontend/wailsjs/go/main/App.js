@@ -6,6 +6,10 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function ClearQueue() {
+  return window['go']['main']['App']['ClearQueue']();
+}
+
 export function CreateSchedule(arg1) {
   return window['go']['main']['App']['CreateSchedule'](arg1);
 }
@@ -40,6 +44,10 @@ export function GetCurrentVersion() {
 
 export function GetLogFiles() {
   return window['go']['main']['App']['GetLogFiles']();
+}
+
+export function GetQueue() {
+  return window['go']['main']['App']['GetQueue']();
 }
 
 export function GetSchedules() {

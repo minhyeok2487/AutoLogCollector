@@ -30,17 +30,34 @@ const (
 	GitHubRepo  = "AutoLogCollector"
 )
 
-// App struct
-type App struct {
-	ctx             context.Context
-	runner          *cisco.Runner
-	updater         *updater.Updater
-	scheduler       *scheduler.Scheduler
-	mu              sync.Mutex
+// queueItem represents a pending execution in the queue
+type queueItem struct {
+	task            *scheduler.ScheduledTask // non-nil for scheduled tasks
 	servers         []cisco.Server
 	commands        []string
-	autoExportExcel bool // Flag for auto Excel export on completion
+	username        string
+	password        string
+	timeout         int
+	enableMode      bool
+	disablePaging   bool
+	autoExportExcel bool
+	enablePassword  string
+	scheduleName    string
+	isManual        bool
+}
+
+// App struct
+type App struct {
+	ctx              context.Context
+	runner           *cisco.Runner
+	updater          *updater.Updater
+	scheduler        *scheduler.Scheduler
+	mu               sync.Mutex
+	servers          []cisco.Server
+	commands         []string
+	autoExportExcel  bool // Flag for auto Excel export on completion
 	pendingEmailTask *scheduler.ScheduledTask
+	queue            []queueItem
 }
 
 // NewApp creates a new App application struct
@@ -84,10 +101,25 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 
 	// Check if another execution is running
 	if a.runner != nil && a.runner.IsRunning() {
-		runtime.EventsEmit(a.ctx, "scheduleSkipped", map[string]interface{}{
+		a.mu.Lock()
+		a.queue = append(a.queue, queueItem{
+			task:            task,
+			servers:         append([]cisco.Server{}, task.Servers...),
+			commands:        append([]string{}, task.Commands...),
+			username:        task.Username,
+			password:        task.Password,
+			timeout:         task.Timeout,
+			enableMode:      task.EnableMode,
+			disablePaging:   task.DisablePaging,
+			autoExportExcel: task.AutoExportExcel,
+			enablePassword:  task.EnablePassword,
+			scheduleName:    task.Name,
+		})
+		a.mu.Unlock()
+		runtime.EventsEmit(a.ctx, "scheduleQueued", map[string]interface{}{
 			"taskId":   task.ID,
 			"taskName": task.Name,
-			"reason":   "Another execution is already running.",
+			"position": len(a.queue),
 		})
 		return
 	}
@@ -102,10 +134,6 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 	a.mu.Lock()
 	a.servers = task.Servers
 	a.commands = task.Commands
-	a.mu.Unlock()
-
-	// Store email config for post-completion
-	a.mu.Lock()
 	a.pendingEmailTask = task
 	a.mu.Unlock()
 
@@ -322,11 +350,34 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 // StartExecution begins the command execution
 func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging, autoExportExcel bool, enablePassword string, scheduleName string) bool {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	if a.runner != nil && a.runner.IsRunning() {
-		return false
+		// Queue the manual execution
+		serversCopy := append([]cisco.Server{}, a.servers...)
+		commandsCopy := append([]string{}, a.commands...)
+		a.queue = append(a.queue, queueItem{
+			servers:         serversCopy,
+			commands:        commandsCopy,
+			username:        username,
+			password:        password,
+			timeout:         timeout,
+			enableMode:      enableMode,
+			disablePaging:   disablePaging,
+			autoExportExcel: autoExportExcel,
+			enablePassword:  enablePassword,
+			scheduleName:    scheduleName,
+			isManual:        true,
+		})
+		pos := len(a.queue)
+		a.mu.Unlock()
+		runtime.EventsEmit(a.ctx, "scheduleQueued", map[string]interface{}{
+			"taskName": scheduleName,
+			"position": pos,
+			"isManual": true,
+		})
+		return true
 	}
+	defer a.mu.Unlock()
 
 	if len(a.servers) == 0 {
 		runtime.EventsEmit(a.ctx, "error", "No servers loaded")
@@ -408,6 +459,9 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 			if emailTask != nil && emailTask.EmailEnabled && emailTask.EmailTo != "" {
 				go a.sendScheduleResultEmail(emailTask, logDir, success, fail, total)
 			}
+
+			// Process next item in queue
+			go a.processQueue()
 		}
 	}
 
@@ -419,11 +473,73 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 	return true
 }
 
-// StopExecution stops the running execution
+// processQueue executes the next item in the queue
+func (a *App) processQueue() {
+	a.mu.Lock()
+	if len(a.queue) == 0 {
+		a.mu.Unlock()
+		return
+	}
+
+	item := a.queue[0]
+	a.queue = a.queue[1:]
+	a.servers = item.servers
+	a.commands = item.commands
+	if item.task != nil {
+		a.pendingEmailTask = item.task
+	}
+	a.mu.Unlock()
+
+	if item.task != nil {
+		runtime.EventsEmit(a.ctx, "scheduleStarted", map[string]interface{}{
+			"taskId":   item.task.ID,
+			"taskName": item.task.Name,
+		})
+	}
+
+	runtime.EventsEmit(a.ctx, "queueProcessing", map[string]interface{}{
+		"scheduleName": item.scheduleName,
+		"remaining":    len(a.queue),
+	})
+
+	a.StartExecution(item.username, item.password, item.timeout, item.enableMode, item.disablePaging, item.autoExportExcel, item.enablePassword, item.scheduleName)
+}
+
+// GetQueue returns the current queue status
+func (a *App) GetQueue() []map[string]interface{} {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	result := make([]map[string]interface{}, len(a.queue))
+	for i, item := range a.queue {
+		entry := map[string]interface{}{
+			"position":     i + 1,
+			"scheduleName": item.scheduleName,
+			"isManual":     item.isManual,
+			"serverCount":  len(item.servers),
+			"commandCount": len(item.commands),
+		}
+		if item.task != nil {
+			entry["taskId"] = item.task.ID
+		}
+		result[i] = entry
+	}
+	return result
+}
+
+// ClearQueue removes all pending items from the queue
+func (a *App) ClearQueue() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.queue = nil
+}
+
+// StopExecution stops the running execution and clears the queue
 func (a *App) StopExecution() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	a.queue = nil
 	if a.runner != nil {
 		a.runner.Stop()
 	}
