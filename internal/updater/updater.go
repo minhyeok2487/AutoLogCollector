@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current application version (set during build or hardcoded)
-var Version = "1.1.1"
+var Version = "1.1.2"
 
 // GitHubRelease represents a GitHub release
 type GitHubRelease struct {
