@@ -49,6 +49,13 @@ func (s *Scheduler) AddTask(task *ScheduledTask) error {
 		task.ID = uuid.New().String()
 	}
 
+	// Check for duplicate name
+	for _, t := range s.tasks {
+		if t.ID != task.ID && t.Name == task.Name {
+			return fmt.Errorf("schedule name '%s' already exists", task.Name)
+		}
+	}
+
 	s.tasks[task.ID] = task
 
 	if task.Enabled {
@@ -64,6 +71,13 @@ func (s *Scheduler) AddTask(task *ScheduledTask) error {
 func (s *Scheduler) UpdateTask(task *ScheduledTask) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Check for duplicate name
+	for _, t := range s.tasks {
+		if t.ID != task.ID && t.Name == task.Name {
+			return fmt.Errorf("schedule name '%s' already exists", task.Name)
+		}
+	}
 
 	// Remove old cron job if exists
 	if entryID, exists := s.cronIDs[task.ID]; exists {
