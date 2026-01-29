@@ -13,7 +13,16 @@ import (
 const (
 	configDir     = "config"
 	schedulesFile = "schedules.json"
+	smtpFile      = "smtp.json"
 )
+
+// SmtpConfig holds SMTP server settings
+type SmtpConfig struct {
+	Server   string `json:"server"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"` // stored encrypted
+}
 
 // Config holds all application configuration
 type Config struct {
@@ -113,4 +122,54 @@ func SaveSchedules(schedules []*scheduler.ScheduledTask) error {
 		Schedules: schedules,
 	}
 	return Save(cfg)
+}
+
+// LoadSmtp loads SMTP configuration with decrypted password
+func LoadSmtp() (*SmtpConfig, error) {
+	path := filepath.Join(configDir, smtpFile)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg SmtpConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	// Decrypt password
+	key, err := crypto.LoadOrGenerateKey()
+	if err == nil && cfg.Password != "" {
+		cfg.Password = crypto.Decrypt(cfg.Password, key)
+	}
+
+	return &cfg, nil
+}
+
+// SaveSmtp saves SMTP configuration with encrypted password
+func SaveSmtp(cfg *SmtpConfig) error {
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return err
+	}
+
+	key, err := crypto.LoadOrGenerateKey()
+	if err != nil {
+		return err
+	}
+
+	saveCfg := *cfg
+	if cfg.Password != "" {
+		encPwd, err := crypto.Encrypt(cfg.Password, key)
+		if err != nil {
+			return err
+		}
+		saveCfg.Password = encPwd
+	}
+
+	data, err := json.MarshalIndent(&saveCfg, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(configDir, smtpFile), data, 0644)
 }

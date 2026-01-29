@@ -32,6 +32,8 @@ export function IsRunning():Promise<boolean>;
 
 export function LoadServerList():Promise<Array<Record<string, string>>>;
 
+export function LoadSmtpSettings():Promise<Record<string, any>>;
+
 export function OpenLogsFolder():Promise<void>;
 
 export function ReadLogFile(arg1:string):Promise<string>;
@@ -41,6 +43,8 @@ export function RestartApp():Promise<void>;
 export function RunScheduleNow(arg1:string):Promise<boolean>;
 
 export function SaveServerList(arg1:Array<Record<string, string>>):Promise<boolean>;
+
+export function SaveSmtpSettings(arg1:Record<string, any>):Promise<boolean>;
 
 export function SetCommands(arg1:Array<string>):Promise<void>;
 

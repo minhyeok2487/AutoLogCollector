@@ -62,6 +62,10 @@ export function LoadServerList() {
   return window['go']['main']['App']['LoadServerList']();
 }
 
+export function LoadSmtpSettings() {
+  return window['go']['main']['App']['LoadSmtpSettings']();
+}
+
 export function OpenLogsFolder() {
   return window['go']['main']['App']['OpenLogsFolder']();
 }
@@ -80,6 +84,10 @@ export function RunScheduleNow(arg1) {
 
 export function SaveServerList(arg1) {
   return window['go']['main']['App']['SaveServerList'](arg1);
+}
+
+export function SaveSmtpSettings(arg1) {
+  return window['go']['main']['App']['SaveSmtpSettings'](arg1);
 }
 
 export function SetCommands(arg1) {

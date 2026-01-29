@@ -868,6 +868,11 @@ function showScheduleForm(scheduleId = null) {
     document.getElementById('scheduleServersBody').innerHTML = '';
     document.getElementById('scheduleCommands').value = '';
 
+    // Reset email fields
+    document.getElementById('scheduleEmailEnabled').checked = false;
+    document.getElementById('scheduleEmailTo').value = '';
+    document.getElementById('emailOptions').style.display = 'none';
+
     // Reset days checkboxes
     document.querySelectorAll('.days-selector input[type="checkbox"]').forEach((cb, i) => {
         cb.checked = (i >= 1 && i <= 5); // Mon-Fri default
@@ -911,6 +916,11 @@ function populateScheduleForm(schedule) {
         document.getElementById('dayOfMonth').value = schedule.dayOfMonth;
     }
 
+    // Email notification
+    document.getElementById('scheduleEmailEnabled').checked = schedule.emailEnabled || false;
+    document.getElementById('scheduleEmailTo').value = schedule.emailTo || '';
+    toggleEmailOptions();
+
     // Populate servers
     const tbody = document.getElementById('scheduleServersBody');
     tbody.innerHTML = '';
@@ -930,6 +940,11 @@ function populateScheduleForm(schedule) {
 
 function closeScheduleForm() {
     document.getElementById('scheduleModal').style.display = 'none';
+}
+
+function toggleEmailOptions() {
+    const enabled = document.getElementById('scheduleEmailEnabled').checked;
+    document.getElementById('emailOptions').style.display = enabled ? 'block' : 'none';
 }
 
 function updateScheduleOptions() {
@@ -987,6 +1002,10 @@ function getScheduleFormData() {
     const autoExportExcel = document.getElementById('scheduleAutoExportExcel').checked;
     const enableMode = document.getElementById('scheduleEnableMode').checked;
 
+    // Email notification
+    const emailEnabled = document.getElementById('scheduleEmailEnabled').checked;
+    const emailTo = document.getElementById('scheduleEmailTo').value.trim();
+
     // Get days of week
     const daysOfWeek = [];
     document.querySelectorAll('.days-selector input[type="checkbox"]:checked').forEach(cb => {
@@ -1032,6 +1051,8 @@ function getScheduleFormData() {
         disablePaging,
         autoExportExcel,
         enableMode,
+        emailEnabled,
+        emailTo,
         enabled: true
     };
 }
@@ -1308,3 +1329,47 @@ window.importScheduleCSV = importScheduleCSV;
 window.exportScheduleCSV = exportScheduleCSV;
 window.importScheduleCommandsTxt = importScheduleCommandsTxt;
 window.exportScheduleCommandsTxt = exportScheduleCommandsTxt;
+
+// ==================== SMTP Settings ====================
+
+async function showSmtpSettings() {
+    const data = await runtime.LoadSmtpSettings();
+    document.getElementById('smtpServer').value = data.server || '';
+    document.getElementById('smtpPort').value = data.port || 587;
+    document.getElementById('smtpUsername').value = data.username || '';
+    document.getElementById('smtpPassword').value = data.password || '';
+    document.getElementById('smtpModal').style.display = 'flex';
+}
+
+function closeSmtpSettings() {
+    document.getElementById('smtpModal').style.display = 'none';
+}
+
+async function saveSmtpSettings() {
+    const data = {
+        server: document.getElementById('smtpServer').value.trim(),
+        port: parseInt(document.getElementById('smtpPort').value) || 587,
+        username: document.getElementById('smtpUsername').value.trim(),
+        password: document.getElementById('smtpPassword').value
+    };
+
+    if (!data.server || !data.username || !data.password) {
+        alert('Please fill in all SMTP fields');
+        return;
+    }
+
+    try {
+        const ok = await runtime.SaveSmtpSettings(data);
+        if (ok) {
+            alert('SMTP settings saved.');
+            closeSmtpSettings();
+        }
+    } catch (err) {
+        alert('Failed to save SMTP settings: ' + err);
+    }
+}
+
+window.showSmtpSettings = showSmtpSettings;
+window.closeSmtpSettings = closeSmtpSettings;
+window.saveSmtpSettings = saveSmtpSettings;
+window.toggleEmailOptions = toggleEmailOptions;

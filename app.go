@@ -1,8 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +17,7 @@ import (
 	"cisco-plink/internal/cisco"
 	"cisco-plink/internal/config"
 	appCrypto "cisco-plink/internal/crypto"
+	"cisco-plink/internal/email"
 	"cisco-plink/internal/scheduler"
 	"cisco-plink/internal/updater"
 
@@ -36,6 +40,7 @@ type App struct {
 	servers         []cisco.Server
 	commands        []string
 	autoExportExcel bool // Flag for auto Excel export on completion
+	pendingEmailTask *scheduler.ScheduledTask
 }
 
 // NewApp creates a new App application struct
@@ -97,6 +102,11 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 	a.mu.Lock()
 	a.servers = task.Servers
 	a.commands = task.Commands
+	a.mu.Unlock()
+
+	// Store email config for post-completion
+	a.mu.Lock()
+	a.pendingEmailTask = task
 	a.mu.Unlock()
 
 	// Start execution with task's credentials and options
@@ -379,13 +389,25 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 
 		success, fail, total := a.runner.GetSummary()
 		if success+fail == total {
+			logDir := a.runner.LogDir
+
 			runtime.EventsEmit(a.ctx, "completed", map[string]interface{}{
 				"success":         success,
 				"fail":            fail,
 				"total":           total,
-				"logDir":          a.runner.LogDir,
+				"logDir":          logDir,
 				"autoExportExcel": a.autoExportExcel,
 			})
+
+			// Send email if configured
+			a.mu.Lock()
+			emailTask := a.pendingEmailTask
+			a.pendingEmailTask = nil
+			a.mu.Unlock()
+
+			if emailTask != nil && emailTask.EmailEnabled && emailTask.EmailTo != "" {
+				go a.sendScheduleResultEmail(emailTask, logDir, success, fail, total)
+			}
 		}
 	}
 
@@ -558,6 +580,151 @@ func (a *App) ExportResults() string {
 	return outputPath
 }
 
+// sendScheduleResultEmail zips the log directory and sends it via email
+func (a *App) sendScheduleResultEmail(task *scheduler.ScheduledTask, logDir string, success, fail, total int) {
+	// Export Excel first if needed
+	excelPath := filepath.Join(logDir, "results.xlsx")
+	if _, err := os.Stat(excelPath); os.IsNotExist(err) {
+		a.mu.Lock()
+		if a.runner != nil {
+			results := a.runner.GetResults()
+			if len(results) > 0 {
+				cisco.ExportToExcel(results, a.commands, excelPath)
+			}
+		}
+		a.mu.Unlock()
+	}
+
+	// Create ZIP
+	zipPath := filepath.Join(logDir, fmt.Sprintf("%s_%s.zip", task.Name, time.Now().Format("2006-01-02_150405")))
+	if err := zipDirectory(logDir, zipPath); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to create ZIP: "+err.Error())
+		return
+	}
+
+	// Load global SMTP settings
+	smtpCfg, err := config.LoadSmtp()
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "error", "SMTP not configured: "+err.Error())
+		os.Remove(zipPath)
+		return
+	}
+
+	// Send email
+	cfg := email.Config{
+		SmtpServer: smtpCfg.Server,
+		SmtpPort:   smtpCfg.Port,
+		Username:   smtpCfg.Username,
+		Password:   smtpCfg.Password,
+		To:         task.EmailTo,
+	}
+	summary := email.Summary{
+		Success: success,
+		Fail:    fail,
+		Total:   total,
+	}
+
+	if err := email.SendResultEmail(cfg, zipPath, task.Name, summary); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to send email: "+err.Error())
+		return
+	}
+
+	runtime.EventsEmit(a.ctx, "info", fmt.Sprintf("Email sent to %s", task.EmailTo))
+
+	// Clean up ZIP file
+	os.Remove(zipPath)
+}
+
+// zipDirectory creates a ZIP file from all files in the directory (excluding .zip files)
+func zipDirectory(srcDir, zipPath string) error {
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	w := zip.NewWriter(zipFile)
+	defer w.Close()
+
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// Skip the zip file itself
+		if filepath.Ext(path) == ".zip" {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+
+		f, err := w.Create(relPath)
+		if err != nil {
+			return err
+		}
+
+		src, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		_, err = io.Copy(f, src)
+		return err
+	})
+}
+
+// ==================== SMTP Settings ====================
+
+// SaveSmtpSettings saves SMTP configuration (encrypted)
+func (a *App) SaveSmtpSettings(data map[string]interface{}) bool {
+	cfg := &config.SmtpConfig{
+		Port: 587,
+	}
+	if server, ok := data["server"].(string); ok {
+		cfg.Server = server
+	}
+	if port, ok := data["port"].(float64); ok {
+		cfg.Port = int(port)
+	}
+	if username, ok := data["username"].(string); ok {
+		cfg.Username = username
+	}
+	if password, ok := data["password"].(string); ok {
+		cfg.Password = password
+	}
+
+	if err := config.SaveSmtp(cfg); err != nil {
+		runtime.EventsEmit(a.ctx, "error", "Failed to save SMTP settings: "+err.Error())
+		return false
+	}
+	return true
+}
+
+// LoadSmtpSettings loads SMTP configuration (decrypted) for UI display
+func (a *App) LoadSmtpSettings() map[string]interface{} {
+	cfg, err := config.LoadSmtp()
+	if err != nil {
+		return map[string]interface{}{
+			"server":   "",
+			"port":     587,
+			"username": "",
+			"password": "",
+		}
+	}
+	return map[string]interface{}{
+		"server":   cfg.Server,
+		"port":     cfg.Port,
+		"username": cfg.Username,
+		"password": cfg.Password,
+	}
+}
+
 // ==================== Schedule Management ====================
 
 // CreateSchedule creates a new scheduled task
@@ -687,6 +854,14 @@ func (a *App) mapToScheduledTask(data map[string]interface{}) *scheduler.Schedul
 		task.AutoExportExcel = autoExportExcel
 	}
 
+	// Email notification
+	if emailEnabled, ok := data["emailEnabled"].(bool); ok {
+		task.EmailEnabled = emailEnabled
+	}
+	if emailTo, ok := data["emailTo"].(string); ok {
+		task.EmailTo = emailTo
+	}
+
 	// Parse credentials
 	if username, ok := data["username"].(string); ok {
 		task.Username = username
@@ -772,6 +947,8 @@ func (a *App) scheduledTaskToMap(task *scheduler.ScheduledTask) map[string]inter
 		"enableMode":      task.EnableMode,
 		"disablePaging":   task.DisablePaging,
 		"autoExportExcel": task.AutoExportExcel,
+		"emailEnabled":    task.EmailEnabled,
+		"emailTo":         task.EmailTo,
 	}
 
 	if task.LastRun != nil {

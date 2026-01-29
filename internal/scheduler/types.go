@@ -31,6 +31,10 @@ type ScheduledTask struct {
 	DisablePaging   bool           `json:"disablePaging"`
 	AutoExportExcel bool           `json:"autoExportExcel"`
 
+	// Email notification
+	EmailEnabled bool   `json:"emailEnabled"`
+	EmailTo      string `json:"emailTo"`
+
 	// Metadata
 	LastRun *time.Time `json:"lastRun,omitempty"`
 	NextRun *time.Time `json:"nextRun,omitempty"`
