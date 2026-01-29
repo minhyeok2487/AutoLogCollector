@@ -1,5 +1,6 @@
 credentials.json
 encryption.key
+config/
 *.log
 logs/
 *.exe
