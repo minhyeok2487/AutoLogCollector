@@ -32,8 +32,14 @@ type Runner struct {
 }
 
 // NewRunner creates a new Runner instance
-func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int, enableMode, disablePaging bool) *Runner {
-	logDir := filepath.Join("logs", time.Now().Format("2006-01-02"))
+func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int, enableMode, disablePaging bool, scheduleName string) *Runner {
+	date := time.Now().Format("2006-01-02")
+	var logDir string
+	if scheduleName != "" {
+		logDir = filepath.Join("logs", scheduleName, date)
+	} else {
+		logDir = filepath.Join("logs", date)
+	}
 	if chunkTimeout <= 0 {
 		chunkTimeout = 1
 	}

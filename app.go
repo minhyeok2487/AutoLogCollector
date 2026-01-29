@@ -22,7 +22,7 @@ import (
 
 // GitHub repository settings for auto-update
 const (
-	GitHubOwner = "your-username"
+	GitHubOwner = "Minhyeok1995"
 	GitHubRepo  = "cisco-plink"
 )
 
@@ -100,7 +100,7 @@ func (a *App) executeScheduledTask(task *scheduler.ScheduledTask) {
 	a.mu.Unlock()
 
 	// Start execution with task's credentials and options
-	a.StartExecution(task.Username, task.Password, task.Timeout, task.EnableMode, task.DisablePaging, task.AutoExportExcel, task.EnablePassword)
+	a.StartExecution(task.Username, task.Password, task.Timeout, task.EnableMode, task.DisablePaging, task.AutoExportExcel, task.EnablePassword, task.Name)
 }
 
 // SetServers sets the server list from GUI input
@@ -310,7 +310,7 @@ func (a *App) ImportServersFromCSV() []map[string]string {
 }
 
 // StartExecution begins the command execution
-func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging, autoExportExcel bool, enablePassword string) bool {
+func (a *App) StartExecution(username, password string, timeout int, enableMode, disablePaging, autoExportExcel bool, enablePassword string, scheduleName string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -346,7 +346,7 @@ func (a *App) StartExecution(username, password string, timeout int, enableMode,
 		EnablePassword: enablePassword,
 	}
 
-	a.runner = cisco.NewRunner(a.servers, a.commands, creds, timeout, enableMode, disablePaging)
+	a.runner = cisco.NewRunner(a.servers, a.commands, creds, timeout, enableMode, disablePaging, scheduleName)
 
 	a.runner.OnProgress = func(current, total int, server cisco.Server, status string) {
 		runtime.EventsEmit(a.ctx, "progress", map[string]interface{}{

@@ -569,7 +569,7 @@ async function startExecution() {
         await runtime.SetServers(servers);
         await runtime.SetCommands(commands);
 
-        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging, autoExportExcel, enablePwd);
+        const success = await runtime.StartExecution(username, password, timeout, enableMode, disablePaging, autoExportExcel, enablePwd, "");
         if (success) {
             setRunningState(true);
             elements.resultsBody.innerHTML = '';
@@ -1211,3 +1211,100 @@ window.openServerCredModal = openServerCredModal;
 window.closeServerCredModal = closeServerCredModal;
 window.saveServerCred = saveServerCred;
 window.clearServerCred = clearServerCred;
+
+// ==================== Schedule Import/Export ====================
+
+function getScheduleServersFromTable() {
+    const rows = document.querySelectorAll('#scheduleServersBody tr');
+    const servers = [];
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type="text"]');
+        if (inputs.length >= 2) {
+            const ip = inputs[0].value.trim();
+            const hostname = inputs[1].value.trim();
+            if (ip) {
+                const server = { ip, hostname: hostname || ip };
+                if (row.dataset.username) server.username = row.dataset.username;
+                if (row.dataset.password) server.password = row.dataset.password;
+                if (row.dataset.enablePassword) server.enablePassword = row.dataset.enablePassword;
+                servers.push(server);
+            }
+        }
+    });
+    return servers;
+}
+
+async function importScheduleCSV() {
+    try {
+        const servers = await runtime.ImportServersFromCSV();
+        if (servers && servers.length > 0) {
+            document.getElementById('scheduleServersBody').innerHTML = '';
+            servers.forEach(server => {
+                addScheduleServerRow(server.ip, server.hostname);
+            });
+        }
+    } catch (err) {
+        showError('Failed to import CSV: ' + err);
+    }
+}
+
+async function exportScheduleCSV() {
+    try {
+        const servers = getScheduleServersFromTable();
+        if (servers.length === 0) {
+            showError('No servers to export');
+            return;
+        }
+        await runtime.ExportServersToCSV(servers);
+    } catch (err) {
+        showError('Failed to export CSV: ' + err);
+    }
+}
+
+async function importScheduleCommandsTxt() {
+    try {
+        const text = await runtime.ImportCommandsFromTxt();
+        if (text) {
+            document.getElementById('scheduleCommands').value = text;
+        }
+    } catch (err) {
+        showError('Failed to import commands: ' + err);
+    }
+}
+
+async function exportScheduleCommandsTxt() {
+    try {
+        const text = document.getElementById('scheduleCommands').value || '';
+        if (!text.trim()) {
+            showError('No commands to export');
+            return;
+        }
+        await runtime.ExportCommandsToTxt(text);
+    } catch (err) {
+        showError('Failed to export commands: ' + err);
+    }
+}
+
+// ==================== About Modal ====================
+
+async function showAboutModal() {
+    try {
+        const version = await runtime.GetCurrentVersion();
+        document.getElementById('aboutVersion').textContent = `v${version}`;
+    } catch (err) {
+        // ignore
+    }
+    document.getElementById('aboutModal').style.display = 'flex';
+}
+
+function closeAboutModal() {
+    document.getElementById('aboutModal').style.display = 'none';
+}
+
+window.showAboutModal = showAboutModal;
+window.closeAboutModal = closeAboutModal;
+
+window.importScheduleCSV = importScheduleCSV;
+window.exportScheduleCSV = exportScheduleCSV;
+window.importScheduleCommandsTxt = importScheduleCommandsTxt;
+window.exportScheduleCommandsTxt = exportScheduleCommandsTxt;

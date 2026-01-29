@@ -46,7 +46,7 @@ export function SetCommands(arg1:Array<string>):Promise<void>;
 
 export function SetServers(arg1:Array<Record<string, string>>):Promise<void>;
 
-export function StartExecution(arg1:string,arg2:string,arg3:number,arg4:boolean,arg5:boolean,arg6:boolean,arg7:string):Promise<boolean>;
+export function StartExecution(arg1:string,arg2:string,arg3:number,arg4:boolean,arg5:boolean,arg6:boolean,arg7:string,arg8:string):Promise<boolean>;
 
 export function StopExecution():Promise<void>;
 
