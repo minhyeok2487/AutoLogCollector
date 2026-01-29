@@ -2,8 +2,11 @@ package cisco
 
 // Server represents a Cisco device
 type Server struct {
-	IP       string `json:"ip"`
-	Hostname string `json:"hostname"`
+	IP             string `json:"ip"`
+	Hostname       string `json:"hostname"`
+	Username       string `json:"username,omitempty"`
+	Password       string `json:"password,omitempty"`
+	EnablePassword string `json:"enablePassword,omitempty"`
 }
 
 // Credentials holds SSH login information

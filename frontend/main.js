@@ -120,14 +120,19 @@ function showSection(section) {
 
 // ==================== Server Table Management ====================
 
-function addServerRow(ip = '', hostname = '') {
+function addServerRow(ip = '', hostname = '', creds = null) {
     const tbody = elements.serversBody;
     if (!tbody) return;
 
+    const hasCreds = creds && creds.username;
     const row = document.createElement('tr');
+    row.dataset.username = creds?.username || '';
+    row.dataset.password = creds?.password || '';
+    row.dataset.enablePassword = creds?.enablePassword || '';
     row.innerHTML = `
         <td><input type="text" placeholder="192.168.1.1" value="${escapeHtml(ip)}" onchange="updateServerCount()"></td>
         <td><input type="text" placeholder="Router1" value="${escapeHtml(hostname)}" onchange="updateServerCount()"></td>
+        <td><button type="button" class="btn-cred ${hasCreds ? 'has-cred' : ''}" onclick="openServerCredModal(this)" title="Set credentials">&#128273;</button></td>
         <td><button type="button" class="delete-btn" onclick="removeServerRow(this)">&times;</button></td>
     `;
     tbody.appendChild(row);
@@ -158,12 +163,16 @@ function getServersFromTable() {
     const servers = [];
 
     rows.forEach(row => {
-        const inputs = row.querySelectorAll('input');
+        const inputs = row.querySelectorAll('input[type="text"]');
         if (inputs.length >= 2) {
             const ip = inputs[0].value.trim();
             const hostname = inputs[1].value.trim();
             if (ip) {
-                servers.push({ ip, hostname: hostname || ip });
+                const server = { ip, hostname: hostname || ip };
+                if (row.dataset.username) server.username = row.dataset.username;
+                if (row.dataset.password) server.password = row.dataset.password;
+                if (row.dataset.enablePassword) server.enablePassword = row.dataset.enablePassword;
+                servers.push(server);
             }
         }
     });
@@ -821,7 +830,11 @@ function populateScheduleForm(schedule) {
     const tbody = document.getElementById('scheduleServersBody');
     tbody.innerHTML = '';
     (schedule.servers || []).forEach(server => {
-        addScheduleServerRow(server.ip, server.hostname);
+        addScheduleServerRow(server.ip, server.hostname, {
+            username: server.username || '',
+            password: server.password || '',
+            enablePassword: server.enablePassword || ''
+        });
     });
 
     // Populate commands
@@ -840,14 +853,19 @@ function updateScheduleOptions() {
     document.getElementById('monthlyOptions').style.display = type === 'monthly' ? 'block' : 'none';
 }
 
-function addScheduleServerRow(ip = '', hostname = '') {
+function addScheduleServerRow(ip = '', hostname = '', creds = null) {
     const tbody = document.getElementById('scheduleServersBody');
     if (!tbody) return;
 
+    const hasCreds = creds && creds.username;
     const row = document.createElement('tr');
+    row.dataset.username = creds?.username || '';
+    row.dataset.password = creds?.password || '';
+    row.dataset.enablePassword = creds?.enablePassword || '';
     row.innerHTML = `
         <td><input type="text" placeholder="192.168.1.1" value="${escapeHtml(ip)}"></td>
         <td><input type="text" placeholder="Router1" value="${escapeHtml(hostname)}"></td>
+        <td><button type="button" class="btn-cred ${hasCreds ? 'has-cred' : ''}" onclick="openServerCredModal(this)" title="Set credentials">&#128273;</button></td>
         <td><button type="button" class="delete-btn" onclick="this.closest('tr').remove()">&times;</button></td>
     `;
     tbody.appendChild(row);
@@ -858,7 +876,11 @@ function copyServersFromExecution() {
     const tbody = document.getElementById('scheduleServersBody');
     tbody.innerHTML = '';
     servers.forEach(server => {
-        addScheduleServerRow(server.ip, server.hostname);
+        addScheduleServerRow(server.ip, server.hostname, {
+            username: server.username || '',
+            password: server.password || '',
+            enablePassword: server.enablePassword || ''
+        });
     });
 }
 
@@ -891,12 +913,16 @@ function getScheduleFormData() {
     // Get servers
     const servers = [];
     document.querySelectorAll('#scheduleServersBody tr').forEach(row => {
-        const inputs = row.querySelectorAll('input');
+        const inputs = row.querySelectorAll('input[type="text"]');
         if (inputs.length >= 2) {
             const ip = inputs[0].value.trim();
             const hostname = inputs[1].value.trim();
             if (ip) {
-                servers.push({ ip, hostname: hostname || ip });
+                const server = { ip, hostname: hostname || ip };
+                if (row.dataset.username) server.username = row.dataset.username;
+                if (row.dataset.password) server.password = row.dataset.password;
+                if (row.dataset.enablePassword) server.enablePassword = row.dataset.enablePassword;
+                servers.push(server);
             }
         }
     });
@@ -982,9 +1008,14 @@ async function deleteSchedule(id) {
 async function toggleSchedule(id, enabled) {
     try {
         await runtime.ToggleSchedule(id, enabled);
-        loadSchedules();
+        // Update local state without re-rendering (preserves toggle animation)
+        const schedule = schedules.find(s => s.id === id);
+        if (schedule) {
+            schedule.enabled = enabled;
+        }
     } catch (err) {
         alert('Failed to toggle schedule: ' + err);
+        loadSchedules(); // Reload on error to restore correct state
     }
 }
 
@@ -1031,3 +1062,64 @@ window.editSchedule = editSchedule;
 window.deleteSchedule = deleteSchedule;
 window.toggleSchedule = toggleSchedule;
 window.runScheduleNow = runScheduleNow;
+
+// ==================== Server Credentials Modal ====================
+
+let currentCredRow = null;
+
+function openServerCredModal(btn) {
+    currentCredRow = btn.closest('tr');
+    if (!currentCredRow) return;
+
+    const ip = currentCredRow.querySelectorAll('input[type="text"]')[0]?.value || '';
+    document.getElementById('serverCredInfo').textContent = ip ? `Server: ${ip}` : 'New Server';
+    document.getElementById('serverCredUsername').value = currentCredRow.dataset.username || '';
+    document.getElementById('serverCredPassword').value = currentCredRow.dataset.password || '';
+    document.getElementById('serverCredEnablePassword').value = currentCredRow.dataset.enablePassword || '';
+    document.getElementById('serverCredModal').style.display = 'flex';
+}
+
+function closeServerCredModal() {
+    document.getElementById('serverCredModal').style.display = 'none';
+    currentCredRow = null;
+}
+
+function saveServerCred() {
+    if (!currentCredRow) return;
+
+    const username = document.getElementById('serverCredUsername').value.trim();
+    const password = document.getElementById('serverCredPassword').value;
+    const enablePassword = document.getElementById('serverCredEnablePassword').value;
+
+    currentCredRow.dataset.username = username;
+    currentCredRow.dataset.password = password;
+    currentCredRow.dataset.enablePassword = enablePassword;
+
+    // Update button style
+    const credBtn = currentCredRow.querySelector('.btn-cred');
+    if (credBtn) {
+        credBtn.classList.toggle('has-cred', !!username);
+    }
+
+    closeServerCredModal();
+}
+
+function clearServerCred() {
+    if (!currentCredRow) return;
+
+    currentCredRow.dataset.username = '';
+    currentCredRow.dataset.password = '';
+    currentCredRow.dataset.enablePassword = '';
+
+    const credBtn = currentCredRow.querySelector('.btn-cred');
+    if (credBtn) {
+        credBtn.classList.remove('has-cred');
+    }
+
+    closeServerCredModal();
+}
+
+window.openServerCredModal = openServerCredModal;
+window.closeServerCredModal = closeServerCredModal;
+window.saveServerCred = saveServerCred;
+window.clearServerCred = clearServerCred;

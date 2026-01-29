@@ -180,7 +180,17 @@ func (r *Runner) worker(wg *sync.WaitGroup, jobs <-chan serverJob) {
 			}
 		}
 
-		output, err := ExecuteCommands(server, r.Credentials, r.Commands, r.ChunkTimeout, r.EnableMode, r.DisablePaging, logCallback)
+		// Use per-server credentials if set, otherwise use global credentials
+		creds := r.Credentials
+		if server.Username != "" && server.Password != "" {
+			creds = &Credentials{
+				User:           server.Username,
+				Password:       server.Password,
+				EnablePassword: server.EnablePassword,
+			}
+		}
+
+		output, err := ExecuteCommands(server, creds, r.Commands, r.ChunkTimeout, r.EnableMode, r.DisablePaging, logCallback)
 		result.Duration = time.Since(startTime).Milliseconds()
 
 		if err != nil {

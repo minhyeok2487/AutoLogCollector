@@ -128,7 +128,8 @@
                                         <tr>
                                             <th>IP Address</th>
                                             <th>Hostname</th>
-                                            <th style="width: 50px;"></th>
+                                            <th style="width: 40px;" title="Per-server credentials">Auth</th>
+                                            <th style="width: 40px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="serversBody">
@@ -475,7 +476,8 @@ show run"></textarea>
                                     <tr>
                                         <th>IP Address</th>
                                         <th>Hostname</th>
-                                        <th style="width: 50px;"></th>
+                                        <th style="width: 40px;">Auth</th>
+                                        <th style="width: 40px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="scheduleServersBody">
@@ -496,6 +498,36 @@ show run"></textarea>
                     <button class="btn-primary" onclick="saveSchedule()">Save Schedule</button>
                     <button class="btn-secondary" onclick="closeScheduleForm()">Cancel</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Credentials Modal -->
+    <div class="modal-overlay" id="serverCredModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Server Credentials</h2>
+                <button class="close-btn" onclick="closeServerCredModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="server-cred-info" id="serverCredInfo"></p>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="serverCredUsername" placeholder="Leave empty to use global">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="serverCredPassword" placeholder="Leave empty to use global">
+                </div>
+                <div class="form-group">
+                    <label>Enable Password</label>
+                    <input type="password" id="serverCredEnablePassword" placeholder="Leave empty to use global">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="saveServerCred()">Save</button>
+                <button class="btn-secondary" onclick="clearServerCred()">Clear</button>
+                <button class="btn-secondary" onclick="closeServerCredModal()">Cancel</button>
             </div>
         </div>
     </div>

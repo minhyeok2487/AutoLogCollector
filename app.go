@@ -115,8 +115,11 @@ func (a *App) SetServers(servers []map[string]string) {
 				hostname = ip
 			}
 			a.servers = append(a.servers, cisco.Server{
-				IP:       ip,
-				Hostname: hostname,
+				IP:             ip,
+				Hostname:       hostname,
+				Username:       s["username"],
+				Password:       s["password"],
+				EnablePassword: s["enablePassword"],
 			})
 		}
 	}
@@ -566,6 +569,15 @@ func (a *App) mapToScheduledTask(data map[string]interface{}) *scheduler.Schedul
 				if hostname, ok := serverMap["hostname"].(string); ok {
 					server.Hostname = hostname
 				}
+				if username, ok := serverMap["username"].(string); ok {
+					server.Username = username
+				}
+				if password, ok := serverMap["password"].(string); ok {
+					server.Password = password
+				}
+				if enablePassword, ok := serverMap["enablePassword"].(string); ok {
+					server.EnablePassword = enablePassword
+				}
 				if server.IP != "" {
 					if server.Hostname == "" {
 						server.Hostname = server.IP
@@ -594,8 +606,11 @@ func (a *App) scheduledTaskToMap(task *scheduler.ScheduledTask) map[string]inter
 	servers := make([]map[string]string, len(task.Servers))
 	for i, s := range task.Servers {
 		servers[i] = map[string]string{
-			"ip":       s.IP,
-			"hostname": s.Hostname,
+			"ip":             s.IP,
+			"hostname":       s.Hostname,
+			"username":       s.Username,
+			"password":       s.Password,
+			"enablePassword": s.EnablePassword,
 		}
 	}
 

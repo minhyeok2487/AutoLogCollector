@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"cisco-plink/internal/cisco"
 	"cisco-plink/internal/crypto"
 	"cisco-plink/internal/scheduler"
 )
@@ -46,6 +47,9 @@ func Load() (*Config, error) {
 
 	for _, task := range cfg.Schedules {
 		task.Password, task.EnablePassword = crypto.DecryptFields(task.Password, task.EnablePassword, key)
+		for j := range task.Servers {
+			task.Servers[j].Password, task.Servers[j].EnablePassword = crypto.DecryptFields(task.Servers[j].Password, task.Servers[j].EnablePassword, key)
+		}
 	}
 
 	return cfg, nil
@@ -76,6 +80,21 @@ func Save(cfg *Config) error {
 		}
 		taskCopy.Password = encPwd
 		taskCopy.EnablePassword = encEnPwd
+
+		// Encrypt per-server credentials
+		taskCopy.Servers = make([]cisco.Server, len(task.Servers))
+		copy(taskCopy.Servers, task.Servers)
+		for j, srv := range task.Servers {
+			if srv.Password != "" {
+				ep, eep, err := crypto.EncryptFields(srv.Password, srv.EnablePassword, key)
+				if err != nil {
+					return err
+				}
+				taskCopy.Servers[j].Password = ep
+				taskCopy.Servers[j].EnablePassword = eep
+			}
+		}
+
 		saveCfg.Schedules[i] = &taskCopy
 	}
 
