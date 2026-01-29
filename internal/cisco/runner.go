@@ -33,12 +33,12 @@ type Runner struct {
 
 // NewRunner creates a new Runner instance
 func NewRunner(servers []Server, commands []string, creds *Credentials, chunkTimeout int, enableMode, disablePaging bool, scheduleName string) *Runner {
-	date := time.Now().Format("2006-01-02")
+	timestamp := time.Now().Format("2006-01-02_150405")
 	var logDir string
 	if scheduleName != "" {
-		logDir = filepath.Join("logs", scheduleName, date)
+		logDir = filepath.Join("logs", scheduleName, timestamp)
 	} else {
-		logDir = filepath.Join("logs", date)
+		logDir = filepath.Join("logs", timestamp)
 	}
 	if chunkTimeout <= 0 {
 		chunkTimeout = 1
