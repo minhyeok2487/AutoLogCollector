@@ -1,6 +1,34 @@
 // Wails runtime
 const runtime = window.go?.main?.App;
 
+// ==================== Toast Notifications ====================
+
+const TOAST_ICONS = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+};
+
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
+        <span class="toast-content">${escapeHtml(message)}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
 // DOM Elements
 const elements = {
     username: document.getElementById('username'),
@@ -63,6 +91,7 @@ function setupEventListeners() {
         window.runtime.EventsOn('updateProgress', handleUpdateProgress);
         window.runtime.EventsOn('updateError', handleUpdateError);
         window.runtime.EventsOn('updateComplete', handleUpdateComplete);
+        window.runtime.EventsOn('info', (msg) => showToast(msg, 'info'));
     }
 }
 
@@ -346,7 +375,7 @@ async function checkForUpdates() {
             latestUpdateInfo = info;
             showUpdateModal(info);
         } else {
-            alert('You are using the latest version.');
+            showToast('You are using the latest version.', 'success');
         }
     } catch (err) {
         showError('Failed to check for updates: ' + err);
@@ -414,7 +443,7 @@ function handleUpdateComplete(message) {
     document.getElementById('updateProgressText').textContent = 'Update installed successfully!';
     document.getElementById('updateProgressFill').style.width = '100%';
     document.getElementById('restartBtn').style.display = 'block';
-    alert(message);
+    showToast(message, 'success', 6000);
 }
 
 async function restartApp() {
@@ -690,7 +719,7 @@ async function exportResults() {
     try {
         const path = await runtime.ExportResults();
         if (path) {
-            alert('Excel exported to:\n' + path);
+            showToast('Excel exported: ' + path, 'success', 5000);
         } else {
             showError('No results to export');
         }
@@ -739,7 +768,7 @@ function updateConnectionInfo(text) {
 }
 
 function showError(message) {
-    alert(message);
+    showToast(message, 'error', 6000);
     setStatus('Error: ' + message);
 }
 
@@ -1061,23 +1090,23 @@ async function saveSchedule() {
     const data = getScheduleFormData();
 
     if (!data.name) {
-        alert('Please enter a schedule name');
+        showToast('Please enter a schedule name', 'warning');
         return;
     }
     if (!data.username || !data.password) {
-        alert('Please enter username and password');
+        showToast('Please enter username and password', 'warning');
         return;
     }
     if (data.servers.length === 0) {
-        alert('Please add at least one server');
+        showToast('Please add at least one server', 'warning');
         return;
     }
     if (data.commands.length === 0) {
-        alert('Please enter at least one command');
+        showToast('Please enter at least one command', 'warning');
         return;
     }
     if (data.scheduleType === 'weekly' && data.daysOfWeek.length === 0) {
-        alert('Please select at least one day of the week');
+        showToast('Please select at least one day of the week', 'warning');
         return;
     }
 
@@ -1090,7 +1119,7 @@ async function saveSchedule() {
         closeScheduleForm();
         loadSchedules();
     } catch (err) {
-        alert('Failed to save schedule: ' + err);
+        showToast('Failed to save schedule: ' + err, 'error');
     }
 }
 
@@ -1107,7 +1136,7 @@ async function deleteSchedule(id) {
         await runtime.DeleteSchedule(id);
         loadSchedules();
     } catch (err) {
-        alert('Failed to delete schedule: ' + err);
+        showToast('Failed to delete schedule: ' + err, 'error');
     }
 }
 
@@ -1120,7 +1149,7 @@ async function toggleSchedule(id, enabled) {
             schedule.enabled = enabled;
         }
     } catch (err) {
-        alert('Failed to toggle schedule: ' + err);
+        showToast('Failed to toggle schedule: ' + err, 'error');
         loadSchedules(); // Reload on error to restore correct state
     }
 }
@@ -1133,7 +1162,7 @@ async function runScheduleNow(id) {
             setStatus('Running scheduled task...');
         }
     } catch (err) {
-        alert('Failed to run schedule: ' + err);
+        showToast('Failed to run schedule: ' + err, 'error');
     }
 }
 
@@ -1146,7 +1175,7 @@ function setupScheduleEventListeners() {
         });
 
         window.runtime.EventsOn('scheduleSkipped', (data) => {
-            alert(`Schedule "${data.taskName}" skipped: ${data.reason}`);
+            showToast(`Schedule "${data.taskName}" skipped: ${data.reason}`, 'warning');
         });
     }
 }
@@ -1354,18 +1383,18 @@ async function saveSmtpSettings() {
     };
 
     if (!data.server || !data.username || !data.password) {
-        alert('Please fill in all SMTP fields');
+        showToast('Please fill in all SMTP fields', 'warning');
         return;
     }
 
     try {
         const ok = await runtime.SaveSmtpSettings(data);
         if (ok) {
-            alert('SMTP settings saved.');
+            showToast('SMTP settings saved.', 'success');
             closeSmtpSettings();
         }
     } catch (err) {
-        alert('Failed to save SMTP settings: ' + err);
+        showToast('Failed to save SMTP settings: ' + err, 'error');
     }
 }
 
