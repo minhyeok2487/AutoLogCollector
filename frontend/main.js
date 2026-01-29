@@ -387,8 +387,12 @@ function showUpdateModal(info) {
         `<strong>Current:</strong> ${info.currentVersion}<br>` +
         `<strong>Latest:</strong> ${info.latestVersion}`;
 
-    document.getElementById('updateReleaseNotes').textContent =
-        info.releaseNotes || 'No release notes available.';
+    const notes = (info.releaseNotes || 'No release notes available.')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/^#+\s*/gm, '')
+        .replace(/^- /gm, '• ');
+    document.getElementById('updateReleaseNotes').textContent = notes;
 
     document.getElementById('updateModal').style.display = 'flex';
     document.getElementById('updateProgress').style.display = 'none';
