@@ -22,7 +22,7 @@ import (
 
 // GitHub repository settings for auto-update
 const (
-	GitHubOwner = "Minhyeok1995"
+	GitHubOwner = "minhyeok2487"
 	GitHubRepo  = "cisco-plink"
 )
 
