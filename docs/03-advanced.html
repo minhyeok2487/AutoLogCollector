@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고급 기능 - AutoLogCollector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f1923; --bg-card: #1a2836; --accent: #2d7ff9;
+            --text: #e8edf2; --text-secondary: #8fa4bf; --text-muted: #5a6f85;
+            --border: #2a3a4a;
+        }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        nav { position: fixed; top: 0; width: 100%; background: rgba(15,25,35,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 100; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { font-weight: 700; font-size: 16px; }
+        .nav-brand a { color: var(--text); text-decoration: none; }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--accent); }
+        .content { max-width: 800px; margin: 0 auto; padding: 88px 32px 60px; }
+        .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; }
+        h2 { font-size: 22px; font-weight: 600; margin-top: 48px; margin-bottom: 12px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        p, li { font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+        ol, ul { padding-left: 24px; margin-bottom: 16px; }
+        li { margin-bottom: 8px; }
+        strong { color: var(--text); }
+        code { background: var(--bg-card); padding: 2px 8px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+        .page-nav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .page-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .page-nav a:hover { text-decoration: underline; }
+        footer { border-top: 1px solid var(--border); padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        @media (max-width: 600px) { .content { padding: 80px 16px 40px; } h1 { font-size: 28px; } nav { padding: 0 16px; } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand"><a href="./">AutoLogCollector</a></div>
+        <div class="nav-links">
+            <a href="./#features">Features</a>
+            <a href="./#guide" class="active">Guide</a>
+            <a href="./#install">Install</a>
+            <a href="./#releases">Releases</a>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="breadcrumb"><a href="./">Home</a> &gt; <a href="./#guide">Guide</a> &gt; 고급 기능</div>
+
+        <h1>고급 기능</h1>
+
+        <h2>병렬 실행 (Concurrent) 설정</h2>
+        <p>Concurrent 값은 동시에 SSH 접속을 시도하는 서버 수를 제어합니다.</p>
+        <ul>
+            <li>서버 수가 적은 경우(10대 이하): 전체 서버 수와 동일하게 설정</li>
+            <li>서버 수가 많은 경우(10대 이상): 5~10 정도로 설정하여 네트워크 부하 분산</li>
+            <li>너무 높은 값은 네트워크 병목이나 장비 부하를 유발할 수 있습니다</li>
+        </ul>
+
+        <h2>서버별 개별 인증 (Per-server Credentials)</h2>
+        <p>환경에 따라 서버마다 다른 계정이 필요한 경우 사용합니다.</p>
+        <ol>
+            <li>Target Servers 테이블에서 해당 서버의 <strong>&#128274;</strong> 아이콘 클릭</li>
+            <li>팝업에서 Username, Password, Enable Password 입력</li>
+            <li><strong>Save</strong> 클릭</li>
+        </ol>
+        <p>설정된 서버는 전역 인증 정보 대신 개별 인증 정보를 사용합니다. 개별 인증을 제거하면 전역 인증으로 돌아갑니다.</p>
+        <p>인증 정보는 <code>config/servers.json</code>에 AES-256-GCM으로 암호화되어 저장됩니다.</p>
+
+        <h2>Enable Mode 사용법</h2>
+        <p><code>show running-config</code> 등 특권 모드가 필요한 명령을 실행할 때 사용합니다.</p>
+        <ol>
+            <li>Connection Settings에서 <strong>Enable Mode</strong> 체크박스 활성화</li>
+            <li><strong>Enable Password</strong> 입력 (로그인 비밀번호와 동일한 경우 비워둘 수 있음)</li>
+            <li>실행 시 자동으로 <code>enable</code> 명령을 전송하고 비밀번호를 입력합니다</li>
+        </ol>
+
+        <h2>Disable Paging 동작 원리</h2>
+        <p>Cisco 장비는 기본적으로 출력이 길면 <code>--More--</code> 프롬프트로 페이징합니다. Disable Paging을 활성화하면:</p>
+        <ol>
+            <li>세션 시작 시 <code>terminal length 0</code> 명령을 자동 전송</li>
+            <li>이후 모든 명령의 출력이 끊기지 않고 전체 표시</li>
+            <li>만약 <code>--More--</code> 프롬프트가 감지되면 자동으로 스페이스를 전송하여 계속 진행</li>
+        </ol>
+
+        <h2>Auto Export Excel</h2>
+        <p>활성화하면 모든 서버의 실행이 완료된 직후 자동으로 <code>results.xlsx</code> 파일이 로그 폴더에 생성됩니다. 수동으로 Results 화면에서 <strong>Export Excel</strong> 버튼을 클릭할 필요가 없습니다.</p>
+
+        <div class="page-nav">
+            <a href="./02-screens.html">&larr; 화면별 상세 가이드</a>
+            <a href="./04-scheduling.html">다음: 스케줄링 완전 가이드 &rarr;</a>
+        </div>
+    </div>
+
+    <footer><p>Developed by 이민혁 &mdash; AutoLogCollector</p></footer>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화면별 상세 가이드 - AutoLogCollector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f1923; --bg-card: #1a2836; --bg-card-hover: #1f3044;
+            --accent: #2d7ff9; --accent-hover: #1a6ce8; --green: #18a058;
+            --text: #e8edf2; --text-secondary: #8fa4bf; --text-muted: #5a6f85;
+            --border: #2a3a4a;
+        }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        nav { position: fixed; top: 0; width: 100%; background: rgba(15,25,35,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 100; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { font-weight: 700; font-size: 16px; }
+        .nav-brand a { color: var(--text); text-decoration: none; }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--accent); }
+        .content { max-width: 800px; margin: 0 auto; padding: 88px 32px 60px; }
+        .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; }
+        h2 { font-size: 24px; font-weight: 600; margin-top: 48px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        h3 { font-size: 18px; font-weight: 600; margin-top: 28px; margin-bottom: 10px; color: var(--accent); }
+        p, li { font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+        ul { padding-left: 24px; margin-bottom: 16px; }
+        li { margin-bottom: 8px; }
+        strong { color: var(--text); }
+        img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); margin: 16px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        th, td { text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-size: 14px; }
+        th { background: var(--bg-card); color: var(--text); font-weight: 600; }
+        td { color: var(--text-secondary); }
+        .page-nav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .page-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .page-nav a:hover { text-decoration: underline; }
+        footer { border-top: 1px solid var(--border); padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        @media (max-width: 600px) { .content { padding: 80px 16px 40px; } h1 { font-size: 28px; } nav { padding: 0 16px; } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand"><a href="./">AutoLogCollector</a></div>
+        <div class="nav-links">
+            <a href="./#features">Features</a>
+            <a href="./#guide" class="active">Guide</a>
+            <a href="./#install">Install</a>
+            <a href="./#releases">Releases</a>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="breadcrumb"><a href="./">Home</a> &gt; <a href="./#guide">Guide</a> &gt; 화면별 상세 가이드</div>
+
+        <h1>화면별 상세 가이드</h1>
+
+        <h2>Execution 화면</h2>
+        <p>메인 화면으로, 접속 정보 설정부터 실행까지 모든 작업을 수행합니다.</p>
+        <img src="../01.png" alt="Execution 화면">
+
+        <h3>Connection Settings</h3>
+        <table>
+            <tr><th>항목</th><th>설명</th><th>기본값</th></tr>
+            <tr><td>Username</td><td>SSH 접속 계정</td><td>-</td></tr>
+            <tr><td>Password</td><td>SSH 접속 비밀번호</td><td>-</td></tr>
+            <tr><td>Timeout</td><td>접속 및 명령 응답 대기 시간 (초)</td><td>10</td></tr>
+            <tr><td>Disable Paging</td><td><code>terminal length 0</code> 자동 전송</td><td>활성화</td></tr>
+            <tr><td>Auto Export Excel</td><td>완료 시 자동 Excel 생성</td><td>비활성화</td></tr>
+            <tr><td>Enable Mode</td><td>특권 모드 진입</td><td>비활성화</td></tr>
+            <tr><td>Enable Password</td><td>Enable Mode 비밀번호 (활성화 시 표시)</td><td>-</td></tr>
+        </table>
+
+        <h3>Target Servers</h3>
+        <ul>
+            <li><strong>Import CSV</strong>: <code>ip,hostname</code> 형식의 CSV 파일에서 서버 목록을 일괄 불러옵니다.</li>
+            <li><strong>Export CSV</strong>: 현재 서버 목록을 CSV 파일로 내보냅니다.</li>
+            <li><strong>+ Add</strong>: 테이블에 새 행을 추가하여 IP와 Hostname을 직접 입력합니다.</li>
+            <li><strong>삭제</strong>: 각 행의 삭제 버튼으로 개별 서버를 제거합니다.</li>
+            <li><strong>서버별 인증(&#128274;)</strong>: 잠금 아이콘을 클릭하면 해당 서버에만 적용되는 별도 인증 정보를 설정할 수 있습니다.</li>
+        </ul>
+
+        <h3>Commands</h3>
+        <ul>
+            <li>텍스트 영역에 명령어를 한 줄씩 입력합니다.</li>
+            <li><strong>Import TXT</strong>: 텍스트 파일에서 명령어를 불러옵니다.</li>
+            <li><strong>Export TXT</strong>: 현재 명령어를 텍스트 파일로 저장합니다.</li>
+            <li>화면 하단에 입력된 명령어 수가 표시됩니다.</li>
+        </ul>
+
+        <h3>실행</h3>
+        <ul>
+            <li><strong>Run Execution</strong>: 설정된 서버 목록에 SSH 접속하여 명령어를 실행합니다.</li>
+            <li><strong>Stop</strong>: 실행 중 중단합니다. 이미 진행 중인 서버 작업은 완료된 후 중단됩니다.</li>
+            <li>진행률 바와 완료 서버 수가 실시간으로 표시됩니다.</li>
+        </ul>
+
+        <h2>Results 화면</h2>
+        <img src="../02.png" alt="Results 화면">
+        <p>실행이 완료되면 서버별 결과를 확인할 수 있습니다.</p>
+        <table>
+            <tr><th>열</th><th>설명</th></tr>
+            <tr><td>Hostname</td><td>서버 호스트명</td></tr>
+            <tr><td>IP</td><td>서버 IP 주소</td></tr>
+            <tr><td>Status</td><td>성공(Success) 또는 실패(Failed)</td></tr>
+            <tr><td>Duration</td><td>명령 실행 소요 시간</td></tr>
+            <tr><td>Action</td><td>View Log 버튼</td></tr>
+        </table>
+        <ul>
+            <li><strong>View Log</strong>: 해당 서버의 전체 로그를 모달 창에서 확인합니다.</li>
+            <li><strong>Export Excel</strong>: 명령어별로 시트가 구분된 Excel 파일을 생성합니다.</li>
+            <li><strong>Open Logs Folder</strong>: Windows 파일 탐색기에서 로그 폴더를 엽니다.</li>
+        </ul>
+        <p>상단 요약 바에서 성공/실패/전체 서버 수를 한눈에 확인할 수 있습니다.</p>
+
+        <h2>Live Logs 화면</h2>
+        <p>실행 중 모든 서버의 SSH 세션 출력을 실시간으로 확인합니다.</p>
+        <ul>
+            <li><strong>Combined 탭</strong>: 모든 서버의 로그가 타임스탬프와 서버명과 함께 통합 표시됩니다.</li>
+            <li><strong>서버별 탭</strong>: 실행이 시작되면 각 서버 이름으로 탭이 자동 생성됩니다. 탭을 클릭하면 해당 서버의 로그만 필터링됩니다.</li>
+            <li><strong>Auto-scroll</strong>: 활성화하면 새 로그 수신 시 자동으로 하단으로 스크롤합니다.</li>
+            <li><strong>Clear</strong>: 화면의 로그를 초기화합니다 (파일에 저장된 로그는 유지).</li>
+        </ul>
+
+        <h2>Schedule 화면</h2>
+        <p>등록된 스케줄 목록을 관리합니다.</p>
+        <table>
+            <tr><th>열</th><th>설명</th></tr>
+            <tr><td>Name</td><td>스케줄 이름</td></tr>
+            <tr><td>Type</td><td>Daily / Weekly / Monthly</td></tr>
+            <tr><td>Time</td><td>실행 시각</td></tr>
+            <tr><td>Next Run</td><td>다음 실행 예정 시각</td></tr>
+            <tr><td>Last Run</td><td>마지막 실행 시각</td></tr>
+            <tr><td>Status</td><td>Enabled / Disabled</td></tr>
+            <tr><td>Actions</td><td>편집, 삭제, 활성화/비활성화</td></tr>
+        </table>
+        <p>자세한 내용은 <a href="./04-scheduling.html" style="color:var(--accent)">스케줄링 완전 가이드</a>를 참조하세요.</p>
+
+        <div class="page-nav">
+            <a href="./01-quick-start.html">&larr; 빠른 시작 가이드</a>
+            <a href="./03-advanced.html">다음: 고급 기능 &rarr;</a>
+        </div>
+    </div>
+
+    <footer><p>Developed by 이민혁 &mdash; AutoLogCollector</p></footer>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 파일 레퍼런스 - AutoLogCollector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f1923; --bg-card: #1a2836; --accent: #2d7ff9;
+            --text: #e8edf2; --text-secondary: #8fa4bf; --text-muted: #5a6f85;
+            --border: #2a3a4a;
+        }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        nav { position: fixed; top: 0; width: 100%; background: rgba(15,25,35,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 100; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { font-weight: 700; font-size: 16px; }
+        .nav-brand a { color: var(--text); text-decoration: none; }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--accent); }
+        .content { max-width: 800px; margin: 0 auto; padding: 88px 32px 60px; }
+        .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; }
+        h2 { font-size: 22px; font-weight: 600; margin-top: 48px; margin-bottom: 12px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        p, li { font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+        ul { padding-left: 24px; margin-bottom: 16px; }
+        li { margin-bottom: 8px; }
+        strong { color: var(--text); }
+        code { background: var(--bg-card); padding: 2px 8px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+        pre { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; overflow-x: auto; }
+        pre code { background: none; padding: 0; font-size: 13px; color: var(--text-secondary); }
+        .page-nav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .page-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .page-nav a:hover { text-decoration: underline; }
+        footer { border-top: 1px solid var(--border); padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        @media (max-width: 600px) { .content { padding: 80px 16px 40px; } h1 { font-size: 28px; } nav { padding: 0 16px; } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand"><a href="./">AutoLogCollector</a></div>
+        <div class="nav-links">
+            <a href="./#features">Features</a>
+            <a href="./#guide" class="active">Guide</a>
+            <a href="./#install">Install</a>
+            <a href="./#releases">Releases</a>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="breadcrumb"><a href="./">Home</a> &gt; <a href="./#guide">Guide</a> &gt; 설정 파일 레퍼런스</div>
+
+        <h1>설정 파일 레퍼런스</h1>
+
+        <h2>servers.csv</h2>
+        <p>서버 목록을 일괄 가져오기/내보내기할 때 사용하는 CSV 파일입니다.</p>
+        <pre><code>ip,hostname
+192.168.0.1,Router1
+192.168.0.2,Switch1
+10.0.0.1,CoreSwitch</code></pre>
+        <ul>
+            <li>첫 번째 행은 헤더(<code>ip,hostname</code>)</li>
+            <li>인증 정보는 포함되지 않음 (보안)</li>
+        </ul>
+
+        <h2>commands.txt</h2>
+        <p>실행할 명령어 목록을 가져오기/내보내기할 때 사용하는 텍스트 파일입니다.</p>
+        <pre><code>show version
+show ip interface brief
+show processes cpu | include CPU
+show memory statistics
+show running-config
+exit</code></pre>
+        <ul>
+            <li>한 줄에 하나의 명령어</li>
+            <li><code>exit</code>는 선택사항 (자동 처리됨)</li>
+            <li>파이프(<code>|</code>) 포함 명령어 사용 가능</li>
+        </ul>
+
+        <h2>credentials.json</h2>
+        <p>전역 인증 정보를 저장하는 JSON 파일입니다.</p>
+        <pre><code>{
+  "user": "admin",
+  "password": "password"
+}</code></pre>
+
+        <h2>config/servers.json (자동 생성)</h2>
+        <p>UI에서 서버별 개별 인증을 설정하면 자동으로 생성됩니다. 인증 정보는 AES-256-GCM으로 암호화됩니다.</p>
+        <pre><code>[
+  {
+    "ip": "192.168.0.1",
+    "hostname": "Router1",
+    "username": "admin",
+    "password": "(암호화된 문자열)",
+    "enablePassword": "(암호화된 문자열)"
+  }
+]</code></pre>
+
+        <h2>config/schedules.json (자동 생성)</h2>
+        <p>스케줄 정보가 자동 저장됩니다. 직접 편집하지 않는 것을 권장합니다.</p>
+
+        <h2>config/smtp.json (자동 생성)</h2>
+        <p>SMTP 설정이 암호화되어 저장됩니다.</p>
+        <pre><code>{
+  "server": "smtp.gmail.com",
+  "port": 587,
+  "username": "user@gmail.com",
+  "password": "(암호화된 문자열)"
+}</code></pre>
+
+        <h2>config/encryption.key (자동 생성)</h2>
+        <p>AES-256-GCM 암호화에 사용되는 키 파일입니다. 설치별로 고유하게 생성되며, 삭제 시 저장된 모든 암호화 정보를 읽을 수 없게 됩니다.</p>
+
+        <div class="page-nav">
+            <a href="./04-scheduling.html">&larr; 스케줄링 완전 가이드</a>
+            <a href="./06-faq.html">다음: FAQ / 트러블슈팅 &rarr;</a>
+        </div>
+    </div>
+
+    <footer><p>Developed by 이민혁 &mdash; AutoLogCollector</p></footer>
+</body>
+</html>

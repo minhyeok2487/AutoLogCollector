@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스케줄링 완전 가이드 - AutoLogCollector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f1923; --bg-card: #1a2836; --accent: #2d7ff9;
+            --text: #e8edf2; --text-secondary: #8fa4bf; --text-muted: #5a6f85;
+            --border: #2a3a4a;
+        }
+        body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        nav { position: fixed; top: 0; width: 100%; background: rgba(15,25,35,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 100; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { font-weight: 700; font-size: 16px; }
+        .nav-brand a { color: var(--text); text-decoration: none; }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--accent); }
+        .content { max-width: 800px; margin: 0 auto; padding: 88px 32px 60px; }
+        .breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; }
+        h2 { font-size: 22px; font-weight: 600; margin-top: 48px; margin-bottom: 12px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        h3 { font-size: 17px; font-weight: 600; margin-top: 24px; margin-bottom: 10px; }
+        p, li { font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+        ol, ul { padding-left: 24px; margin-bottom: 16px; }
+        li { margin-bottom: 8px; }
+        strong { color: var(--text); }
+        code { background: var(--bg-card); padding: 2px 8px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+        pre { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; overflow-x: auto; }
+        pre code { background: none; padding: 0; font-size: 13px; color: var(--text-secondary); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        th, td { text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-size: 14px; }
+        th { background: var(--bg-card); color: var(--text); font-weight: 600; }
+        td { color: var(--text-secondary); }
+        .page-nav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .page-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .page-nav a:hover { text-decoration: underline; }
+        footer { border-top: 1px solid var(--border); padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        @media (max-width: 600px) { .content { padding: 80px 16px 40px; } h1 { font-size: 28px; } nav { padding: 0 16px; } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand"><a href="./">AutoLogCollector</a></div>
+        <div class="nav-links">
+            <a href="./#features">Features</a>
+            <a href="./#guide" class="active">Guide</a>
+            <a href="./#install">Install</a>
+            <a href="./#releases">Releases</a>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="breadcrumb"><a href="./">Home</a> &gt; <a href="./#guide">Guide</a> &gt; 스케줄링 완전 가이드</div>
+
+        <h1>스케줄링 완전 가이드</h1>
+
+        <h2>스케줄 생성</h2>
+        <ol>
+            <li>좌측 메뉴에서 <strong>Schedule</strong> 클릭</li>
+            <li><strong>+ New Schedule</strong> 버튼 클릭</li>
+            <li>스케줄 양식 작성</li>
+        </ol>
+
+        <h3>기본 정보</h3>
+        <ul>
+            <li><strong>Name</strong>: 스케줄 이름 (중복 불가)</li>
+        </ul>
+
+        <h3>인증 정보</h3>
+        <ul>
+            <li><strong>Username / Password</strong>: 스케줄 실행에 사용할 SSH 계정</li>
+            <li><strong>Enable Password</strong>: Enable Mode 사용 시 비밀번호</li>
+        </ul>
+
+        <h3>스케줄 타입</h3>
+        <table>
+            <tr><th>타입</th><th>설정 항목</th><th>예시</th></tr>
+            <tr><td>Daily</td><td>실행 시각</td><td>매일 09:00</td></tr>
+            <tr><td>Weekly</td><td>요일 선택 + 실행 시각</td><td>월~금 18:00</td></tr>
+            <tr><td>Monthly</td><td>날짜 + 실행 시각</td><td>매월 1일 00:00</td></tr>
+        </table>
+
+        <h3>실행 옵션</h3>
+        <ul>
+            <li><strong>Timeout</strong>: 명령 응답 대기 시간</li>
+            <li><strong>Disable Paging</strong>: 페이징 비활성화</li>
+            <li><strong>Enable Mode</strong>: 특권 모드 진입</li>
+            <li><strong>Auto Export Excel</strong>: 자동 Excel 생성</li>
+        </ul>
+
+        <h3>대상 서버 및 명령어</h3>
+        <ul>
+            <li>직접 서버와 명령어를 입력하거나</li>
+            <li><strong>Copy from Execution</strong> 버튼으로 현재 Execution 화면의 서버 목록과 명령어를 복사</li>
+        </ul>
+
+        <h2>Execution에서 서버/명령어 복사</h2>
+        <p>스케줄 생성 화면에서 <strong>Copy from Execution</strong> 기능을 사용하면 Execution 화면에 현재 설정된 서버 목록과 명령어를 그대로 스케줄에 복사할 수 있습니다. 매번 동일한 서버와 명령어를 다시 입력할 필요가 없습니다.</p>
+
+        <h2>이메일 알림 설정</h2>
+
+        <h3>1단계: SMTP 설정</h3>
+        <ol>
+            <li>좌측 하단 <strong>Settings</strong> &rarr; <strong>SMTP Settings</strong> 클릭</li>
+            <li>SMTP 서버 정보 입력:</li>
+        </ol>
+        <table>
+            <tr><th>항목</th><th>예시</th></tr>
+            <tr><td>SMTP Server</td><td>smtp.gmail.com</td></tr>
+            <tr><td>Port</td><td>587</td></tr>
+            <tr><td>Username</td><td>user@gmail.com</td></tr>
+            <tr><td>Password</td><td>앱 비밀번호</td></tr>
+        </table>
+        <ol start="3">
+            <li><strong>Save</strong> 클릭 (인증 정보는 AES-256-GCM으로 암호화 저장)</li>
+        </ol>
+
+        <h3>2단계: 스케줄에 수신자 지정</h3>
+        <ol>
+            <li>스케줄 생성/수정 화면에서 <strong>Email Notification</strong> 활성화</li>
+            <li><strong>Email To</strong> 필드에 수신자 이메일 주소 입력</li>
+            <li>스케줄 저장</li>
+        </ol>
+
+        <h3>발송되는 이메일 내용</h3>
+        <ul>
+            <li>HTML 형식의 실행 결과 요약</li>
+            <li>서버별 성공/실패 상태 배지</li>
+            <li>로그 파일 및 Excel이 포함된 ZIP 파일 첨부</li>
+        </ul>
+
+        <h2>스케줄 로그 저장 경로</h2>
+        <p>스케줄 실행 로그는 다음 경로에 저장됩니다:</p>
+        <pre><code>logs/{스케줄이름}/YYYY-MM-DD_HHmmss/
+├── Router1.log
+├── Switch1.log
+├── ...
+└── results.xlsx (Auto Export Excel 활성화 시)</code></pre>
+        <p>같은 날 여러 번 실행되어도 타임스탬프(<code>HHmmss</code>)로 구분되어 덮어쓰기가 발생하지 않습니다.</p>
+
+        <div class="page-nav">
+            <a href="./03-advanced.html">&larr; 고급 기능</a>
+            <a href="./05-config-reference.html">다음: 설정 파일 레퍼런스 &rarr;</a>
+        </div>
+    </div>
+
+    <footer><p>Developed by 이민혁 &mdash; AutoLogCollector</p></footer>
+</body>
+</html>
